@@ -38,16 +38,38 @@ async function initDB() {
             );
         `);
         
-        // Auto-seed admin user
+        // Auto-seed admin and all default users
         const bcrypt = require('bcryptjs');
         const hash = await bcrypt.hash('Password@123', 10);
-        await client.query(`
-            INSERT INTO users (name, role, username, password_hash)
-            VALUES ('System Admin', 'admin', 'admin', $1)
-            ON CONFLICT (username) DO NOTHING
-        `, [hash]);
         
-        console.log('✅ Database tables initialized and admin seeded.');
+        const USERS = [
+            { name: 'System Admin', role: 'admin', username: 'admin' },
+            // Seniors
+            { name: 'Tamil',       role: 'senior', username: 'tamil' },
+            { name: 'Arun',        role: 'senior', username: 'arun' },
+            { name: 'Pavan',       role: 'senior', username: 'pavan' },
+            { name: 'Mani',        role: 'senior', username: 'mani' },
+            { name: 'Lakshman',    role: 'senior', username: 'lakshman' },
+            // Juniors
+            { name: 'Vivek',       role: 'junior', username: 'vivek' },
+            { name: 'Manikhandan', role: 'junior', username: 'manikhandan' },
+            { name: 'Harikrishna', role: 'junior', username: 'harikrishna' },
+            { name: 'Adharsh',     role: 'junior', username: 'adharsh' },
+            { name: 'Santosh',     role: 'junior', username: 'santosh' },
+            { name: 'Chandan',     role: 'junior', username: 'chandan' },
+            { name: 'Kushal',      role: 'junior', username: 'kushal' },
+            { name: 'Sreya',       role: 'junior', username: 'sreya' }
+        ];
+
+        for (const u of USERS) {
+            await client.query(`
+                INSERT INTO users (name, role, username, password_hash)
+                VALUES ($1, $2, $3, $4)
+                ON CONFLICT (username) DO NOTHING
+            `, [u.name, u.role, u.username, hash]);
+        }
+        
+        console.log('✅ Database tables initialized and default users seeded.');
     } finally {
         client.release();
     }
