@@ -355,6 +355,14 @@ app.get('/logout', (req, res) => {
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────
-initDB().then(() => {
-    server.listen(PORT, () => console.log(`\n🚀 SystemCall running at http://localhost:${PORT}\n`));
-});
+if (process.env.VERCEL) {
+    // Vercel serverless environment
+    // Note: initDB() might take time, but we just export the app immediately for Vercel
+    initDB().catch(console.error);
+    module.exports = server;
+} else {
+    // Local environment
+    initDB().then(() => {
+        server.listen(PORT, () => console.log(`\n🚀 SystemCall running at http://localhost:${PORT}\n`));
+    });
+}
