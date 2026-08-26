@@ -13,7 +13,7 @@ async function initDB() {
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
                 name VARCHAR(100) NOT NULL,
-                role VARCHAR(10) NOT NULL CHECK (role IN ('senior', 'junior')),
+                role VARCHAR(10) NOT NULL CHECK (role IN ('senior', 'junior', 'admin')),
                 username VARCHAR(50) UNIQUE NOT NULL,
                 password_hash VARCHAR(255) NOT NULL,
                 phone_number VARCHAR(25) DEFAULT NULL,
@@ -37,7 +37,17 @@ async function initDB() {
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
-        console.log('✅ Database tables initialized.');
+        
+        // Auto-seed admin user
+        const bcrypt = require('bcryptjs');
+        const hash = await bcrypt.hash('Password@123', 10);
+        await client.query(`
+            INSERT INTO users (name, role, username, password_hash)
+            VALUES ('System Admin', 'admin', 'admin', $1)
+            ON CONFLICT (username) DO NOTHING
+        `, [hash]);
+        
+        console.log('✅ Database tables initialized and admin seeded.');
     } finally {
         client.release();
     }
