@@ -56,10 +56,10 @@ async function requireAuth(req, res, next) {
             
             if (email) {
                 console.log("Checking DB for existing email...");
-                result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+                result = await pool.query('SELECT * FROM users WHERE email = $1 ORDER BY id ASC LIMIT 1', [email]);
                 if (result.rows.length > 0) {
                     console.log("Found existing user by email, updating clerk_id...");
-                    await pool.query('UPDATE users SET clerk_id = $1 WHERE email = $2', [req.auth.userId, email]);
+                    await pool.query('UPDATE users SET clerk_id = $1 WHERE id = $2', [req.auth.userId, result.rows[0].id]);
                     req.user = result.rows[0];
                     return next();
                 }
