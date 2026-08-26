@@ -11,8 +11,6 @@ const { pool, initDB } = require('./db');
 const { sendMail, newIssueEmail, responseEmail, updateEmail } = require('./mailer');
 
 const app = express();
-const { clerkMiddleware } = require("@clerk/express");
-app.use(clerkMiddleware());
 const server = http.createServer(app);
 const io = new Server(server);
 const PORT = process.env.PORT || 3000;
@@ -23,6 +21,10 @@ app.locals.clerkPublishableKey = process.env.CLERK_PUBLISHABLE_KEY;
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
+
+const { clerkMiddleware } = require("@clerk/express");
+app.use(clerkMiddleware());
+
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -32,32 +34,44 @@ const { createClerkClient } = require('@clerk/express');
 const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
 
 async function requireAuth(req, res, next) {
+    console.log("--- requireAuth triggered for:", req.path);
+    console.log("req.auth exists?", !!req.auth);
+    if (req.auth) console.log("req.auth.userId:", req.auth.userId);
+
     if (req.auth && req.auth.userId) {
         try {
+            console.log("Searching for clerk_id in DB:", req.auth.userId);
             let result = await pool.query('SELECT * FROM users WHERE clerk_id = $1', [req.auth.userId]);
             if (result.rows.length > 0) {
+                console.log("Found existing user by clerk_id!");
                 req.user = result.rows[0];
                 return next();
             }
             
+            console.log("User not found by clerk_id. Fetching from Clerk API...");
             const clerkUser = await clerkClient.users.getUser(req.auth.userId);
             const email = clerkUser.emailAddresses[0]?.emailAddress;
             const name = (clerkUser.firstName || '') + ' ' + (clerkUser.lastName || '');
+            console.log("Clerk API returned email:", email, "name:", name);
             
             if (email) {
+                console.log("Checking DB for existing email...");
                 result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
                 if (result.rows.length > 0) {
+                    console.log("Found existing user by email, updating clerk_id...");
                     await pool.query('UPDATE users SET clerk_id = $1 WHERE email = $2', [req.auth.userId, email]);
                     req.user = result.rows[0];
                     return next();
                 }
             }
             
+            console.log("Inserting new user into DB...");
             const insertRes = await pool.query(`
                 INSERT INTO users (name, role, username, password_hash, email, clerk_id)
                 VALUES ($1, 'junior', $2, 'clerk_managed', $3, $4)
                 RETURNING *
             `, [name.trim() || 'New User', email || req.auth.userId, email, req.auth.userId]);
+            console.log("Inserted new user:", insertRes.rows[0]);
             req.user = insertRes.rows[0];
             return next();
         } catch(e) {
@@ -66,8 +80,12 @@ async function requireAuth(req, res, next) {
         }
     }
 
+    console.log("No req.auth.userId found. Falling back to JWT token check...");
     const token = req.cookies.token;
-    if (!token) return res.redirect('/login');
+    if (!token) {
+        console.log("No JWT token found either. Redirecting to /login.");
+        return res.redirect('/login');
+    }
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
         decoded.id = parseInt(decoded.id);
