@@ -609,6 +609,17 @@
 
 <%- include('partials/scripts') %>
 <script>
+    window.addEventListener('load', async function () {
+        await Clerk.load();
+        if (Clerk.isSignedIn) {
+            const userButtonDiv = document.getElementById('user-button');
+            Clerk.mountUserButton(userButtonDiv);
+        }
+    });
+
+    const currentUserId = <%= user.id %>;
+    const currentUserRole = '<%= user.role %>';
+
 // ── Priority selector ────────────────────────────────────────────────────────
 function setPriority(val) {
     document.getElementById('priority-input').value = val;

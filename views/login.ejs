@@ -57,7 +57,9 @@
         window.location.href = '/dashboard';
     } else {
         const signInDiv = document.getElementById('clerk-sign-in');
-        Clerk.mountSignIn(signInDiv);
+        Clerk.mountSignIn(signInDiv, {
+            forceRedirectUrl: '/dashboard'
+        });
     }
   });
 
