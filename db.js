@@ -14,9 +14,11 @@ async function initDB() {
                 id SERIAL PRIMARY KEY,
                 name VARCHAR(100) NOT NULL,
                 role VARCHAR(10) NOT NULL CHECK (role IN ('senior', 'junior', 'admin')),
-                username VARCHAR(50) UNIQUE NOT NULL,
-                password_hash VARCHAR(255) NOT NULL,
+                username VARCHAR(50) UNIQUE,
+                password_hash VARCHAR(255),
                 phone_number VARCHAR(25) DEFAULT NULL,
+                email VARCHAR(255) UNIQUE,
+                clerk_id VARCHAR(255) UNIQUE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 

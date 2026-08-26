@@ -11,10 +11,13 @@ const { pool, initDB } = require('./db');
 const { sendMail, newIssueEmail, responseEmail, updateEmail } = require('./mailer');
 
 const app = express();
+const { clerkMiddleware } = require("@clerk/express");
+app.use(clerkMiddleware());
 const server = http.createServer(app);
 const io = new Server(server);
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
+app.locals.clerkPublishableKey = process.env.CLERK_PUBLISHABLE_KEY;
 
 // ─── Middleware ────────────────────────────────────────────────────────────────
 app.use(express.urlencoded({ extended: true }));
@@ -25,7 +28,44 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ─── Auth Middleware ───────────────────────────────────────────────────────────
-function requireAuth(req, res, next) {
+const { createClerkClient } = require('@clerk/express');
+const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
+
+async function requireAuth(req, res, next) {
+    if (req.auth && req.auth.userId) {
+        try {
+            let result = await pool.query('SELECT * FROM users WHERE clerk_id = $1', [req.auth.userId]);
+            if (result.rows.length > 0) {
+                req.user = result.rows[0];
+                return next();
+            }
+            
+            const clerkUser = await clerkClient.users.getUser(req.auth.userId);
+            const email = clerkUser.emailAddresses[0]?.emailAddress;
+            const name = (clerkUser.firstName || '') + ' ' + (clerkUser.lastName || '');
+            
+            if (email) {
+                result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+                if (result.rows.length > 0) {
+                    await pool.query('UPDATE users SET clerk_id = $1 WHERE email = $2', [req.auth.userId, email]);
+                    req.user = result.rows[0];
+                    return next();
+                }
+            }
+            
+            const insertRes = await pool.query(`
+                INSERT INTO users (name, role, username, password_hash, email, clerk_id)
+                VALUES ($1, 'junior', $2, 'clerk_managed', $3, $4)
+                RETURNING *
+            `, [name.trim() || 'New User', email || req.auth.userId, email, req.auth.userId]);
+            req.user = insertRes.rows[0];
+            return next();
+        } catch(e) {
+            console.error('Clerk user sync error', e);
+            return res.redirect('/login');
+        }
+    }
+
     const token = req.cookies.token;
     if (!token) return res.redirect('/login');
     try {
