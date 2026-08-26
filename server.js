@@ -34,58 +34,67 @@ const { createClerkClient } = require('@clerk/express');
 const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
 
 async function requireAuth(req, res, next) {
-    console.log("--- requireAuth triggered for:", req.path);
-    console.log("req.auth exists?", !!req.auth);
-    if (req.auth) console.log("req.auth.userId:", req.auth.userId);
+    console.log("--- requireAuth:", req.path, "| clerk userId:", req.auth?.userId || 'none');
 
     if (req.auth && req.auth.userId) {
         try {
-            console.log("Searching for clerk_id in DB:", req.auth.userId);
-            let result = await pool.query('SELECT * FROM users WHERE clerk_id = $1', [req.auth.userId]);
+            const clerkUserId = req.auth.userId;
+
+            // 1. Try find by clerk_id
+            let result = await pool.query('SELECT * FROM users WHERE clerk_id = $1', [clerkUserId]);
             if (result.rows.length > 0) {
-                console.log("Found existing user by clerk_id!");
                 req.user = result.rows[0];
                 return next();
             }
-            
-            console.log("User not found by clerk_id. Fetching from Clerk API...");
-            const clerkUser = await clerkClient.users.getUser(req.auth.userId);
-            const email = clerkUser.emailAddresses[0]?.emailAddress;
-            const name = (clerkUser.firstName || '') + ' ' + (clerkUser.lastName || '');
-            console.log("Clerk API returned email:", email, "name:", name);
-            
+
+            // 2. Get email from req.auth session claims (no external API call needed)
+            //    Clerk puts email in sessionClaims.email when configured, otherwise fall back to API
+            let email = null;
+            let name = 'New User';
+
+            try {
+                // Try the Clerk API for email/name (works on Vercel/real network)
+                const clerkUser = await clerkClient.users.getUser(clerkUserId);
+                email = clerkUser.emailAddresses[0]?.emailAddress;
+                name = ((clerkUser.firstName || '') + ' ' + (clerkUser.lastName || '')).trim() || 'New User';
+                console.log("Got from Clerk API:", email, name);
+            } catch (apiErr) {
+                // Fallback: try session claims
+                email = req.auth.sessionClaims?.email || req.auth.sessionClaims?.['email'] || null;
+                name = req.auth.sessionClaims?.name || 'New User';
+                console.warn("Clerk API unavailable, using session claims. email:", email);
+            }
+
+            // 3. Try match by email
             if (email) {
-                console.log("Checking DB for existing email...");
                 result = await pool.query('SELECT * FROM users WHERE email = $1 ORDER BY id ASC LIMIT 1', [email]);
                 if (result.rows.length > 0) {
-                    console.log("Found existing user by email, updating clerk_id...");
-                    await pool.query('UPDATE users SET clerk_id = $1 WHERE id = $2', [req.auth.userId, result.rows[0].id]);
+                    await pool.query('UPDATE users SET clerk_id = $1 WHERE id = $2', [clerkUserId, result.rows[0].id]);
                     req.user = result.rows[0];
                     return next();
                 }
             }
-            
-            console.log("Inserting new user into DB...");
+
+            // 4. Create new user
+            const username = email || clerkUserId;
             const insertRes = await pool.query(`
                 INSERT INTO users (name, role, username, password_hash, email, clerk_id)
                 VALUES ($1, 'junior', $2, 'clerk_managed', $3, $4)
+                ON CONFLICT (clerk_id) DO UPDATE SET name = EXCLUDED.name
                 RETURNING *
-            `, [name.trim() || 'New User', email || req.auth.userId, email, req.auth.userId]);
-            console.log("Inserted new user:", insertRes.rows[0]);
+            `, [name, username, email, clerkUserId]);
             req.user = insertRes.rows[0];
+            console.log("Created/updated user:", req.user.id, req.user.name);
             return next();
-        } catch(e) {
-            console.error('Clerk user sync error', e);
+        } catch (e) {
+            console.error('requireAuth Clerk sync error:', e.message);
             return res.redirect('/login');
         }
     }
 
-    console.log("No req.auth.userId found. Falling back to JWT token check...");
+    // Fallback: legacy JWT cookie
     const token = req.cookies.token;
-    if (!token) {
-        console.log("No JWT token found either. Redirecting to /login.");
-        return res.redirect('/login');
-    }
+    if (!token) return res.redirect('/login');
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
         decoded.id = parseInt(decoded.id);
@@ -99,6 +108,8 @@ async function requireAuth(req, res, next) {
 }
 
 function requireEmail(req, res, next) {
+    // Clerk-managed users always have email handled by Clerk; skip this check
+    if (req.user && req.user.password_hash === 'clerk_managed') return next();
     if (!req.user.email) return res.redirect('/setup-email');
     next();
 }
@@ -132,6 +143,8 @@ app.get('/', (req, res) => res.redirect('/dashboard'));
 
 // GET /login
 app.get('/login', (req, res) => {
+    // If Clerk session exists, skip to dashboard
+    if (req.auth && req.auth.userId) return res.redirect('/dashboard');
     if (req.cookies.token) return res.redirect('/dashboard');
     res.render('login', { error: null });
 });
