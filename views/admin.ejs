@@ -1,0 +1,256 @@
+<%- include('partials/head', { title: 'Admin Panel — SystemCall' }) %>
+
+<style>
+.shell {
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at 85% -10%, rgba(16,185,129,0.1) 0%, transparent 45%),
+        radial-gradient(circle at -10% 90%, rgba(59,130,246,0.08) 0%, transparent 45%),
+        var(--bg-primary);
+    background-attachment: fixed;
+}
+.topbar {
+    position: sticky; top: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 32px;
+    background: var(--topbar-bg);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-bottom: 1px solid var(--border-color);
+}
+.topbar-brand { 
+    font-size: var(--text-xl); font-weight: 700; letter-spacing: -0.04em; 
+    display: flex; align-items: center; gap: 12px; 
+    color: var(--text-primary);
+}
+.brand-dot { width: 12px; height: 12px; border-radius: 50%; background: linear-gradient(135deg, #f59e0b, #ef4444); box-shadow: 0 0 12px rgba(239,68,68,0.5); }
+.content { max-width: 1200px; margin: 0 auto; padding: 40px 32px; animation: slideUpFade 0.6s var(--transition-base) forwards; }
+
+.glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--glass-shadow);
+    padding: 24px;
+}
+/* Buttons are now in design-system.css */
+
+.form-group { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.form-group label { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+.form-input { padding: 8px 12px; font-size: 13px; border-radius: var(--radius-md); border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-primary); outline: none; transition: border-color 0.2s; }
+.form-input:focus { border-color: var(--accent-primary); }
+
+.data-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
+.data-table th { text-align: left; padding: 10px 16px; color: var(--text-secondary); font-weight: 600; border-bottom: 1px solid var(--border-color); text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; }
+.data-table td { padding: 10px 16px; border-bottom: 1px solid var(--border-color); color: var(--text-primary); }
+.data-table tr:hover td { background: var(--chip-bg); }
+
+.alert { padding: 12px 16px; border-radius: var(--radius-md); font-size: var(--text-sm); margin-bottom: 24px; }
+.alert-error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #ef4444; }
+.alert-success { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); color: #10b981; }
+
+.admin-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 24px;
+    align-items: start;
+}
+
+.hide-mobile { display: inline-block; }
+
+.back-btn {
+    padding: 0; width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+}
+.back-btn svg { margin: 0; }
+
+@media (max-width: 900px) {
+    .admin-layout {
+        grid-template-columns: 1fr;
+    }
+}
+@media (max-width: 768px) {
+    .hide-mobile { display: none !important; }
+    .hide-col-mobile { display: none !important; }
+    .topbar { padding: 12px 16px; gap: 8px; }
+    .topbar-brand { font-size: 16px; }
+    
+    .content { padding: 16px 12px; }
+    
+    .data-table th, .data-table td { padding: 8px 6px; font-size: 12px; }
+    .data-table th { font-size: 10px; }
+}
+</style>
+
+<div class="shell">
+    <div class="topbar">
+        <div class="topbar-brand">
+            <div class="brand-dot"></div>
+            <span class="hide-mobile">SystemCall</span> <span style="color: var(--text-muted); font-size: 14px; font-weight: 400; margin-left: 8px;">/ Admin Panel</span>
+        </div>
+        <div class="topbar-right">
+            <a href="/" class="btn btn-secondary back-btn" title="Back to Dashboard">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            </a>
+        </div>
+    </div>
+
+    <div class="content">
+        <% if (error) { %> <div class="alert alert-error"><%= error %></div> <% } %>
+        <% if (success) { %> <div class="alert alert-success"><%= success %></div> <% } %>
+
+        <div class="admin-layout">
+            
+            <div style="min-width: 0;">
+                <!-- Seniors & Admins Table -->
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                    <h2 style="font-size: 16px; font-weight: 600;">Seniors & Admins</h2>
+                    <span style="font-size: 12px; color: var(--text-muted);"><%= users.filter(u => u.role !== 'junior').length %> Users</span>
+                </div>
+                <div class="glass" style="margin-bottom: 24px; padding: 8px 0; overflow-x: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th class="hide-col-mobile">Username</th>
+                                <th class="hide-col-mobile">Role</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% users.filter(u => u.role !== 'junior').forEach(u => { %>
+                                <tr>
+                                    <td style="font-weight: 600;"><%= u.name %></td>
+                                    <td class="hide-col-mobile"><%= u.username %></td>
+                                    <td class="hide-col-mobile">
+                                        <span style="background: var(--chip-bg); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border-color); text-transform: uppercase; font-size: 10px; font-weight: 700;">
+                                            <%= u.role %>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <% if (u.id !== user.id) { %>
+                                        <form action="/api/admin/users/<%= u.id %>/delete" method="POST" style="margin: 0;" onsubmit="return confirm('Delete this user completely?');">
+                                            <button type="submit" class="btn-danger">Delete</button>
+                                        </form>
+                                        <% } else { %>
+                                            <span style="font-size: 12px; color: var(--text-muted);">You</span>
+                                        <% } %>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Juniors Table -->
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                    <h2 style="font-size: 16px; font-weight: 600;">Juniors</h2>
+                    <span style="font-size: 12px; color: var(--text-muted);"><%= users.filter(u => u.role === 'junior').length %> Users</span>
+                </div>
+                <div class="glass" style="margin-bottom: 32px; padding: 8px 0; overflow-x: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th class="hide-col-mobile">Username</th>
+                                <th class="hide-col-mobile">Role</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% users.filter(u => u.role === 'junior').forEach(u => { %>
+                                <tr>
+                                    <td style="font-weight: 600;"><%= u.name %></td>
+                                    <td class="hide-col-mobile"><%= u.username %></td>
+                                    <td class="hide-col-mobile">
+                                        <span style="background: var(--chip-bg); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border-color); text-transform: uppercase; font-size: 10px; font-weight: 700;">
+                                            <%= u.role %>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <form action="/api/admin/users/<%= u.id %>/delete" method="POST" style="margin: 0;" onsubmit="return confirm('Delete this user completely?');">
+                                            <button type="submit" class="btn-danger">Delete</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Issues Table -->
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                    <h2 style="font-size: 16px; font-weight: 600;">All Issues</h2>
+                    <span style="font-size: 12px; color: var(--text-muted);"><%= issues.length %> Total</span>
+                </div>
+                <div class="glass" style="padding: 8px 0; overflow-x: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Project</th>
+                                <th>Title</th>
+                                <th>Status</th>
+                                <th>Senior</th>
+                                <th>Junior</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% issues.forEach(i => { %>
+                                <tr>
+                                    <td>#<%= i.id %></td>
+                                    <td><%= i.project_name %></td>
+                                    <td style="font-weight: 500;"><%= i.title %></td>
+                                    <td><%= i.status %></td>
+                                    <td style="color: var(--text-secondary);"><%= i.created_name %></td>
+                                    <td style="color: var(--text-secondary);"><%= i.assigned_name %></td>
+                                    <td>
+                                        <form action="/api/admin/issues/<%= i.id %>/delete" method="POST" style="margin: 0;" onsubmit="return confirm('Permanently delete this issue?');">
+                                            <button type="submit" class="btn-danger">Delete</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Create User Sidebar -->
+            <div>
+                <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 12px;">Add New User</h2>
+                <div class="glass" style="padding: 20px;">
+                    <form action="/api/admin/users" method="POST">
+                        <div class="form-group">
+                            <label for="new_name">Name</label>
+                            <input type="text" id="new_name" name="name" class="form-input" placeholder="e.g. John Doe" required autocomplete="name">
+                        </div>
+                        <div class="form-group">
+                            <label for="new_username">Username</label>
+                            <input type="text" id="new_username" name="username" class="form-input" placeholder="e.g. john" required autocomplete="username">
+                        </div>
+                        <div class="form-group">
+                            <label for="new_password">Password</label>
+                            <input type="password" id="new_password" name="password" class="form-input" placeholder="Default password" required autocomplete="new-password">
+                        </div>
+                        <div class="form-group">
+                            <label for="new_role">Role</label>
+                            <select id="new_role" name="role" class="form-input" required autocomplete="organization-title">
+                                <option value="junior">Junior</option>
+                                <option value="senior">Senior</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 12px; font-size: 13px; padding: 10px;">Create User</button>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,116 @@
+<%- include('partials/head', { title: 'Profile — SystemCall' }) %>
+
+<style>
+.shell {
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at 85% -10%, rgba(16,185,129,0.1) 0%, transparent 45%),
+        radial-gradient(circle at -10% 90%, rgba(59,130,246,0.08) 0%, transparent 45%),
+        var(--bg-primary);
+    background-attachment: fixed;
+}
+.topbar {
+    position: sticky; top: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 32px;
+    background: var(--topbar-bg);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-bottom: 1px solid var(--border-color);
+}
+.topbar-brand { 
+    font-size: var(--text-xl); font-weight: 700; letter-spacing: -0.04em; 
+    display: flex; align-items: center; gap: 12px; 
+    color: var(--text-primary);
+}
+.brand-dot { width: 12px; height: 12px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-primary), #34d399); box-shadow: 0 0 12px rgba(16,185,129,0.8); animation: pulseGlow 2s infinite; }
+.content { max-width: 600px; margin: 0 auto; padding: 60px 20px; animation: slideUpFade 0.6s var(--transition-base) forwards; }
+.glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--glass-shadow);
+    padding: 32px;
+}
+.form-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+.form-group label { font-size: var(--text-sm); font-weight: 500; color: var(--text-secondary); letter-spacing: 0.02em; }
+.form-input {
+    padding: 12px 16px; border-radius: var(--radius-md); border: 1px solid var(--border-color);
+    background: var(--input-bg); color: var(--text-primary); font-family: var(--font-sans); font-size: var(--text-base);
+    outline: none; transition: all var(--transition-base); width: 100%;
+}
+.form-input:focus {
+    border-color: var(--accent-primary); background: var(--input-focus-bg); box-shadow: 0 0 0 4px rgba(16,185,129,0.15);
+}
+/* Buttons are now in design-system.css */
+
+.alert { padding: 12px 16px; border-radius: var(--radius-md); font-size: var(--text-sm); margin-bottom: 24px; }
+.alert-error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #ef4444; }
+.alert-success { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); color: #10b981; }
+
+.back-btn {
+    padding: 0; width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+}
+.back-btn svg { margin: 0; }
+</style>
+
+<div class="shell">
+    <div class="topbar">
+        <div class="topbar-brand">
+            <div class="brand-dot"></div>
+            SystemCall
+        </div>
+        <div class="topbar-right">
+            <a href="/dashboard" class="btn btn-secondary back-btn" title="Back to Dashboard">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            </a>
+        </div>
+    </div>
+
+    <div class="content">
+        <h1 style="font-size: var(--text-2xl); margin-bottom: 8px;">Your Profile</h1>
+        <p style="color: var(--text-secondary); margin-bottom: 32px;">Manage your account details and preferences.</p>
+
+        <% if (error) { %> <div class="alert alert-error"><%= error %></div> <% } %>
+        <% if (success) { %> <div class="alert alert-success"><%= success %></div> <% } %>
+
+        <div class="glass">
+            <form action="/api/profile" method="POST">
+                <div class="form-group">
+                    <label for="display_username">Username (Non-editable)</label>
+                    <input type="text" id="display_username" name="display_username" class="form-input" value="<%= user.username %>" disabled style="opacity: 0.5;" autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="display_role">Role</label>
+                    <input type="text" id="display_role" name="display_role" class="form-input" value="<%= user.role.toUpperCase() %>" disabled style="opacity: 0.5;" autocomplete="organization-title">
+                </div>
+                <hr style="border: none; border-top: 1px solid var(--border-color); margin: 24px 0;">
+                
+                <div class="form-group">
+                    <label for="name">Display Name</label>
+                    <input type="text" id="name" name="name" class="form-input" value="<%= user.name %>" required autocomplete="name">
+                </div>
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" class="form-input" value="<%= user.email %>" required autocomplete="email">
+                </div>
+                
+                <hr style="border: none; border-top: 1px solid var(--border-color); margin: 24px 0;">
+                
+                <div class="form-group">
+                    <label for="password">Change Password</label>
+                    <input type="password" id="password" name="password" class="form-input" placeholder="Leave blank to keep current password" autocomplete="new-password">
+                </div>
+
+                <div style="margin-top: 32px; display: flex; justify-content: flex-end;">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

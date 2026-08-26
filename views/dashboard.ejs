@@ -1,0 +1,702 @@
+<%- include('partials/head', { title: user.name + ' — SystemCall' }) %>
+<script src="/socket.io/socket.io.js"></script>
+
+<style>
+/* ── Layout ─────────────────────────────────────────── */
+.shell {
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at 85% -10%, rgba(16,185,129,0.1) 0%, transparent 45%),
+        radial-gradient(circle at -10% 90%, rgba(59,130,246,0.08) 0%, transparent 45%),
+        var(--bg-primary);
+    background-attachment: fixed;
+}
+.topbar {
+    position: sticky; top: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 32px;
+    background: var(--topbar-bg);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-bottom: 1px solid var(--border-color);
+}
+.topbar-brand { 
+    font-size: var(--text-xl); font-weight: 700; letter-spacing: -0.04em; 
+    display: flex; align-items: center; gap: 12px; 
+    color: var(--text-primary);
+}
+.brand-dot { width: 12px; height: 12px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-primary), #34d399); box-shadow: 0 0 12px rgba(16,185,129,0.8); animation: pulseGlow 2s infinite; }
+.topbar-right { display: flex; align-items: center; gap: 16px; }
+.avatar-chip {
+    display: flex; align-items: center; gap: 12px;
+}
+.avatar { 
+    width: 36px; height: 36px; border-radius: 50%; 
+    display: flex; align-items: center; justify-content: center; 
+    font-size: 14px; font-weight: 700; color: white; 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.admin-panel-btn {
+    padding: 0 !important; 
+    width: 36px !important; 
+    height: 36px !important; 
+    border-radius: 50% !important; 
+    margin-right: 8px !important;
+    display: flex !important; 
+    align-items: center !important; 
+    justify-content: center !important;
+}
+.admin-panel-btn svg { margin: 0 !important; color: #ffffff !important; stroke: #ffffff !important; }
+
+/* ── Content ─────────────────────────────────────────── */
+.content { max-width: 1200px; margin: 0 auto; padding: 40px 32px; animation: slideUpFade 0.6s var(--transition-base) forwards; }
+.section-title {
+    font-size: var(--text-xl); font-weight: 600;
+    margin-bottom: var(--space-6);
+    display: flex; align-items: center; gap: 12px;
+    color: var(--text-primary);
+    text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+.section-title::before {
+    content: '';
+    display: block; width: 4px; height: 24px;
+    border-radius: 2px; background: linear-gradient(to bottom, var(--accent-primary), var(--accent-secondary));
+    box-shadow: 0 0 8px rgba(16,185,129,0.5);
+}
+
+/* ── Glass Cards ─────────────────────────────────────── */
+.glass { 
+    background: var(--glass-bg); 
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); 
+    border: 1px solid var(--glass-border); 
+    border-radius: var(--radius-xl);
+    box-shadow: var(--glass-shadow);
+}
+
+/* ── Form ────────────────────────────────────────────── */
+.raise-form { padding: 32px; display: flex; flex-direction: column; gap: 24px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.form-group { display: flex; flex-direction: column; gap: 8px; }
+.form-group label { font-size: var(--text-sm); font-weight: 500; color: var(--text-secondary); letter-spacing: 0.02em; }
+.form-input {
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    background: var(--input-bg);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    outline: none;
+    width: 100%;
+    transition: all var(--transition-base);
+}
+.form-input:focus { 
+    border-color: var(--accent-primary); 
+    background: var(--input-focus-bg);
+    box-shadow: 0 0 0 4px rgba(16,185,129,0.15); 
+}
+.form-input::placeholder { color: var(--text-muted); }
+
+.btn-secondary { 
+    background: var(--btn-sec-bg); color: var(--text-primary); 
+    border: 1px solid var(--btn-sec-border); 
+}
+.btn-secondary:hover { 
+    background: var(--btn-sec-hover); border-color: var(--border-color); 
+    transform: translateY(-1px);
+}
+
+.btn-danger { 
+    background: rgba(239,68,68,0.15); color: #f87171; 
+    border: 1px solid rgba(239,68,68,0.2); 
+}
+.btn-danger:hover { 
+    background: rgba(239,68,68,0.25); border-color: rgba(239,68,68,0.4); 
+    color: #fca5a5;
+    transform: translateY(-1px);
+}
+
+.btn-ghost { background: transparent; color: var(--text-secondary); padding: 8px 12px; box-shadow: none; }
+.btn-ghost:hover { color: var(--text-primary); background: rgba(255,255,255,0.05); }
+
+/* ── Priority selector ───────────────────────────────── */
+.priority-group { display: flex; gap: 10px; }
+.priority-btn {
+    flex: 1; padding: 10px 6px; text-align: center; border-radius: var(--radius-md);
+    border: 1px solid var(--border-color); background: var(--input-bg);
+    color: var(--text-secondary); font-family: var(--font-sans);
+    font-size: var(--text-sm); font-weight: 500; cursor: pointer;
+    transition: all var(--transition-base);
+}
+.priority-btn.active-low    { border-color: #22c55e; color: #22c55e; background: rgba(34,197,94,0.1); box-shadow: 0 0 15px rgba(34,197,94,0.2); }
+.priority-btn.active-medium { border-color: #f59e0b; color: #f59e0b; background: rgba(245,158,11,0.1); box-shadow: 0 0 15px rgba(245,158,11,0.2); }
+.priority-btn.active-high   { border-color: #ef4444; color: #ef4444; background: rgba(239,68,68,0.1); box-shadow: 0 0 15px rgba(239,68,68,0.2); }
+
+/* ── Kanban ──────────────────────────────────────────── */
+.kanban { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+.kanban-col { 
+    padding: 20px; border-radius: var(--radius-xl); 
+    border: 1px solid var(--border-color); 
+    background: var(--kanban-bg); 
+}
+.kanban-col-header { 
+    font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; 
+    color: var(--text-secondary); margin-bottom: 20px; 
+    display: flex; justify-content: space-between; align-items: center; 
+}
+.col-count { background: var(--chip-bg); border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 600; color: var(--text-primary); }
+
+/* ── Issue Cards ─────────────────────────────────────── */
+.issue-card {
+    padding: 16px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--card-border);
+    border-left: 4px solid var(--border-color);
+    background: var(--card-bg);
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    position: relative;
+    box-shadow: var(--shadow-sm);
+}
+.issue-card:hover { 
+    border-color: var(--border-hover); 
+    transform: translateY(-2px); 
+    box-shadow: var(--shadow-md); 
+    z-index: 10;
+}
+
+.issue-details {
+    display: none;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border-color);
+}
+.issue-card.expanded .issue-details {
+    display: block;
+}
+.issue-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    opacity: 0; transition: opacity var(--transition-base);
+}
+.issue-card:hover::before { opacity: 1; }
+.issue-id { font-size: 11px; font-weight: 600; color: var(--accent-secondary); margin-bottom: 6px; letter-spacing: 0.05em; }
+.issue-title { font-size: var(--text-base); font-weight: 600; margin-bottom: 12px; line-height: 1.4; color: var(--text-primary); }
+.issue-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.priority-chip {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 3px 10px; border-radius: 6px;
+}
+.p-low    { background: rgba(34,197,94,0.15);  color: #34d399; border: 1px solid rgba(34,197,94,0.2); }
+.p-medium { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.2); }
+.p-high   { background: rgba(239,68,68,0.15);  color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+.assignee-chip {
+    font-size: 11px; font-weight: 500; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;
+    background: var(--chip-bg); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border-color);
+}
+
+/* ── Status borders ──────────────────────────────────── */
+.s-pending  { border-left: 4px solid var(--accent-warning); }
+.s-accepted { border-left: 4px solid var(--accent-secondary); }
+.s-denied   { border-left: 4px solid #ef4444; }
+.s-progress { border-left: 4px solid var(--accent-purple); }
+.s-resolved { border-left: 4px solid var(--accent-success); opacity: 0.7; }
+
+/* ── Junior inbox ────────────────────────────────────── */
+.inbox-card {
+    padding: 24px 28px;
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--glass-border);
+    background: var(--glass-bg);
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    transition: all var(--transition-base);
+    box-shadow: var(--shadow-sm);
+}
+.inbox-card:hover { 
+    border-color: var(--border-hover); 
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+.inbox-actions { display: flex; gap: 12px; flex-shrink: 0; }
+
+/* ── Expandable update drawer ────────────────────────── */
+.active-task { margin-bottom: 12px; }
+.task-trigger {
+    padding: 18px 20px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    background: var(--task-bg);
+    display: flex; justify-content: space-between; align-items: center;
+    cursor: pointer; transition: border-color 200ms;
+}
+.task-trigger:hover { border-color: var(--border-hover); }
+.task-trigger.open { border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: 1px dashed var(--border-color); }
+.task-drawer {
+    max-height: 0; overflow: hidden;
+    transition: max-height 0.42s cubic-bezier(0.4, 0, 0.2, 1);
+    background: var(--drawer-bg);
+    border: 1px solid var(--border-color);
+    border-top: none;
+    border-bottom-left-radius: var(--radius-lg);
+    border-bottom-right-radius: var(--radius-lg);
+}
+.task-drawer.open { max-height: 480px; }
+.task-drawer-inner { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+
+/* ── Buttons ─────────────────────────────────────────── */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 18px; font-family: var(--font-sans); font-size: var(--text-sm); font-weight: 500; border-radius: var(--radius-md); border: none; cursor: pointer; transition: all 150ms; }
+.btn-primary { background: var(--accent-primary); color: #fff; }
+.btn-primary:hover { background: var(--accent-primary-hover); box-shadow: var(--shadow-glow); }
+.btn-secondary { background: rgba(255,255,255,0.06); color: var(--text-primary); border: 1px solid rgba(255,255,255,0.1); }
+.btn-secondary:hover { background: rgba(255,255,255,0.1); }
+.btn-danger { background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+.btn-danger:hover { background: rgba(239,68,68,0.2); }
+
+/* ── Toast ───────────────────────────────────────────── */
+.toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 20px; border-radius: var(--radius-full);
+    background: #25D366; color: #fff; font-weight: 500; font-size: var(--text-sm);
+    box-shadow: 0 8px 24px rgba(37,211,102,0.4);
+    transform: translateY(80px); opacity: 0; pointer-events: none;
+}
+
+/* ── Update history ──────────────────────────────────── */
+.update-item {
+    padding: 10px 14px;
+    background: var(--chip-bg);
+    border-radius: var(--radius-md);
+    border-left: 3px solid var(--accent-purple);
+    font-size: var(--text-sm);
+}
+.update-meta { font-size: var(--text-xs); color: var(--text-muted); margin-top: 4px; }
+
+/* ── Empty state ─────────────────────────────────────── */
+.empty { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: var(--text-sm); }
+
+/* ── Resolve toggle ──────────────────────────────────── */
+.resolve-toggle { display: flex; gap: 10px; align-items: center; }
+.resolve-toggle label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: var(--text-sm); color: var(--text-secondary); }
+.resolve-toggle input[type="radio"] { accent-color: var(--accent-primary); }
+
+/* ── Responsive Design ───────────────────────────────── */
+@media (max-width: 1024px) {
+    .kanban { grid-template-columns: repeat(2, 1fr); }
+    .content { padding: 32px 24px; }
+}
+
+@media (max-width: 768px) {
+    .kanban { grid-template-columns: 1fr; }
+    .form-row { grid-template-columns: 1fr; gap: 12px; }
+    .topbar { padding: 12px 16px; flex-direction: row; justify-content: space-between; gap: 8px; }
+    .topbar-right { gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .topbar-brand { font-size: var(--text-base); }
+    .avatar-chip { font-size: var(--text-xs); gap: 0; }
+    .avatar-chip > div:not(.avatar) { display: none; } /* Hide name and role text on mobile */
+    .avatar { width: 32px; height: 32px; font-size: 12px; margin-right: 0; }
+    .hide-mobile { display: none !important; }
+    
+    .content { padding: 16px 12px; }
+    .section-title { font-size: var(--text-lg); margin-bottom: var(--space-4); }
+    
+    /* Tighter cards */
+    .raise-form { padding: 20px 16px; gap: 16px; }
+    .kanban-col { padding: 16px 12px; }
+    .inbox-card { flex-direction: column; align-items: flex-start; gap: 12px; padding: 16px; }
+    
+    /* Make inputs slightly smaller */
+    .form-group { gap: 4px; }
+    .form-input { padding: 10px 12px; font-size: 14px; }
+    
+    /* Full width buttons */
+    .inbox-actions { width: 100%; display: grid; grid-template-columns: 1fr 1fr; }
+    .inbox-actions .btn { width: 100%; padding: 10px; }
+    .update-form { flex-direction: column; gap: 8px; }
+    .update-form .btn { width: 100%; }
+    
+    /* Priority group row instead of column for better space */
+    .priority-group { flex-direction: row; }
+    .priority-btn { padding: 8px 4px; font-size: 13px; }
+}
+</style>
+
+<!-- Toast notification -->
+<div class="toast" id="global-toast">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M11.5 2.5C6.253 2.5 2 6.753 2 12c0 1.821.497 3.523 1.361 4.983L2 22l5.233-1.373A9.43 9.43 0 0011.5 21.5C16.747 21.5 21 17.247 21 12S16.747 2.5 11.5 2.5z"/></svg>
+    <span id="global-toast-msg"></span>
+</div>
+
+<div class="shell">
+    <!-- ── Topbar ─────────────────────────────────────────── -->
+    <div class="topbar">
+        <div class="topbar-brand">
+            <div class="brand-dot"></div>
+            <span class="hide-mobile">SystemCall</span>
+        </div>
+        <div class="topbar-right">
+            <button id="theme-toggle" class="btn btn-secondary" style="padding: 0; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;" title="Toggle Theme">
+                <svg id="theme-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+            </button>
+            <div class="avatar-chip" style="margin-right: 8px;">
+                <div class="avatar" style="background: <%= user.role === 'admin' ? '#ef4444' : (user.role === 'senior' ? 'var(--accent-purple)' : 'var(--accent-secondary)') %>;">
+                    <%= user.name.charAt(0) %>
+                </div>
+                <div>
+                    <div style="font-size: var(--text-sm); font-weight: 600;"><%= user.name %></div>
+                    <div style="font-size: 10px; text-transform: capitalize; color: var(--text-muted);"><%= user.role %></div>
+                </div>
+            </div>
+            <% if (user.role === 'admin') { %>
+            <a href="/admin" class="btn btn-admin admin-panel-btn" title="Admin Panel">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+            </a>
+            <% } %>
+            <div style="display: flex; gap: 8px;">
+                <a href="/profile" class="btn btn-secondary" style="padding: 0; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;" title="Profile">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </a>
+                <a href="/logout" class="btn btn-secondary" style="padding: 0; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;" title="Logout">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="content" id="main-content">
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- SENIOR VIEW                                          -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <% if (user.role === 'senior') { %>
+
+        <!-- Raise Issue Form -->
+        <div class="section-title" style="margin-bottom: var(--space-4);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-primary);"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+            Raise an Issue
+        </div>
+        <div class="glass" style="margin-bottom: 40px;">
+            <form class="raise-form" action="/api/issues" method="POST" id="raise-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="project_name">Project Name</label>
+                        <input id="project_name" name="project_name" type="text" class="form-input" placeholder="e.g. Machine Vision QC" required autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="client_name">Client Name</label>
+                        <input id="client_name" name="client_name" type="text" class="form-input" placeholder="e.g. Tata Motors" required autocomplete="off">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="assigned_to">Assign to Junior</label>
+                        <select id="assigned_to" name="assigned_to" class="form-input" required>
+                            <option value="" disabled selected>Select junior…</option>
+                            <% juniors.forEach(j => { %>
+                                <option value="<%= j.id %>"><%= j.name %></option>
+                            <% }); %>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="title">Issue Title</label>
+                        <input id="title" name="title" type="text" class="form-input" placeholder="e.g. Camera calibration drift after shift change" required autocomplete="off">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea id="description" name="description" class="form-input" rows="3" placeholder="Detailed description of the issue…" style="resize: vertical;"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Priority</label>
+                    <div class="priority-group" id="priority-group">
+                        <button type="button" class="priority-btn active-low" data-val="Low" onclick="setPriority('Low')">🟢 Low</button>
+                        <button type="button" class="priority-btn" data-val="Medium" onclick="setPriority('Medium')">🟡 Medium</button>
+                        <button type="button" class="priority-btn" data-val="High" onclick="setPriority('High')">🔴 High</button>
+                    </div>
+                    <input type="hidden" name="priority" id="priority-input" value="Low">
+                </div>
+                <div style="display: flex; justify-content: flex-end;">
+                    <button type="submit" class="btn btn-primary" data-magnetic style="padding: 10px 24px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                        Assign & Notify
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Kanban Board -->
+        <div class="section-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-primary);"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line></svg>
+            Issue Tracker
+        </div>
+        <div class="kanban">
+            <%
+            const cols = [
+                { key: 'Pending Response', label: 'Pending',     css: 's-pending' },
+                { key: 'Accepted',         label: 'Accepted',    css: 's-accepted' },
+                { key: 'In Progress',      label: 'In Progress', css: 's-progress' },
+                { key: 'Resolved',         label: 'Resolved',    css: 's-resolved' },
+            ];
+            %>
+            <% cols.forEach(col => { %>
+                <div class="kanban-col">
+                    <div class="kanban-col-header">
+                        <%= col.label %>
+                        <span class="col-count" id="count-<%= col.key.replace(' ','') %>">
+                            <%= issues.filter(i => i.status === col.key).length %>
+                        </span>
+                    </div>
+                    <div id="col-<%= col.key.replace(/ /g,'_') %>">
+                    <% issues.filter(i => i.status === col.key).forEach(issue => { %>
+                        <div class="issue-card <%= col.css %>" id="issue-<%= issue.id %>" onclick="this.classList.toggle('expanded')">
+                            <div class="issue-id">#<%= issue.id %> · <%= issue.project_name %><% if(issue.client_name){ %> · <span style="color:var(--accent-secondary)"><%= issue.client_name %></span><% } %></div>
+                            <div class="issue-title" style="margin-bottom: 0;"><%= issue.title %></div>
+                            <div class="issue-details">
+                                <div class="issue-meta">
+                                    <span class="priority-chip p-<%= issue.priority.toLowerCase() %>"><%= issue.priority %></span>
+                                    <span class="assignee-chip">👤 <%= issue.assigned_name %></span>
+                                </div>
+                                <% if (issue.updates && issue.updates.length > 0) { %>
+                                    <div class="update-item" style="margin-top: 10px; font-size: 12px;">
+                                        "<%= issue.updates[issue.updates.length-1].text %>"
+                                        <div class="update-meta"><%= new Date(issue.updates[issue.updates.length-1].timestamp).toLocaleString('en-IN') %></div>
+                                    </div>
+                                <% } %>
+                            </div>
+                        </div>
+                    <% }); %>
+                    <% if (issues.filter(i => i.status === col.key).length === 0) { %>
+                        <div class="empty">No issues</div>
+                    <% } %>
+                    </div>
+                </div>
+            <% }); %>
+        </div>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- JUNIOR VIEW                                          -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <% } else { %>
+
+        <% const pending = issues.filter(i => i.status === 'Pending Response'); %>
+        <% const active  = issues.filter(i => i.status === 'Accepted' || i.status === 'In Progress'); %>
+        <% const closed  = issues.filter(i => i.status === 'Resolved' || i.status === 'Denied'); %>
+
+        <!-- Inbox -->
+        <div class="section-title" style="margin-bottom: var(--space-4);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-primary);"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>
+            Inbox
+            <% if (pending.length > 0) { %>
+                <span style="background: rgba(245,158,11,0.15); color: var(--accent-warning); font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: var(--radius-full); letter-spacing: 0; text-transform: none;"><%= pending.length %> new</span>
+            <% } %>
+        </div>
+        <div id="junior-inbox" style="margin-bottom: 40px;">
+            <% if (pending.length === 0) { %>
+                <div class="empty glass" style="padding: 32px;">No pending assignments 🎉</div>
+            <% } %>
+            <% pending.forEach(issue => { %>
+                <div class="inbox-card s-pending" id="inbox-<%= issue.id %>" onclick="this.classList.toggle('expanded')">
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">#<%= issue.id %> · <%= issue.project_name %><% if(issue.client_name){ %> · <span style="color:var(--accent-secondary)"><%= issue.client_name %></span><% } %> · Assigned by <strong><%= issue.created_name %></strong></div>
+                        <div style="font-weight: 600; font-size: var(--text-base); margin-bottom: 6px;"><%= issue.title %></div>
+                        <% if (issue.description) { %>
+                            <div class="inbox-desc"><%= issue.description %></div>
+                        <% } %>
+                        <span class="priority-chip p-<%= issue.priority.toLowerCase() %>" style="margin-top: 8px; display: inline-block;"><%= issue.priority %></span>
+                    </div>
+                    <div class="inbox-actions">
+                        <form action="/api/issues/<%= issue.id %>/respond" method="POST">
+                            <input type="hidden" name="action" value="deny">
+                            <button type="submit" class="btn btn-danger" data-magnetic>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                Deny
+                            </button>
+                        </form>
+                        <form action="/api/issues/<%= issue.id %>/respond" method="POST">
+                            <input type="hidden" name="action" value="accept">
+                            <button type="submit" class="btn btn-primary" data-magnetic>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                Accept
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            <% }); %>
+        </div>
+
+        <!-- Active Tasks -->
+        <div class="section-title" style="margin-bottom: var(--space-4);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-primary);"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+            Active Tasks
+        </div>
+        <div style="margin-bottom: 40px;">
+            <% if (active.length === 0) { %>
+                <div class="empty glass" style="padding: 32px;">No active tasks right now.</div>
+            <% } %>
+            <% active.forEach(issue => { %>
+                <div class="active-task">
+                    <div class="task-trigger s-progress" onclick="toggleDrawer(<%= issue.id %>)" id="trigger-<%= issue.id %>">
+                        <div style="flex: 1;">
+                            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">#<%= issue.id %> · <%= issue.project_name %> · by <%= issue.created_name %></div>
+                            <div style="font-weight: 600; font-size: var(--text-base);"><%= issue.title %></div>
+                            <span class="priority-chip p-<%= issue.priority.toLowerCase() %>" style="margin-top: 6px; display: inline-block;"><%= issue.priority %></span>
+                        </div>
+                        <div style="color: var(--text-muted); font-size: 20px; transition: transform 300ms;" id="chevron-<%= issue.id %>">›</div>
+                    </div>
+                    <div class="task-drawer" id="drawer-<%= issue.id %>">
+                        <div class="task-drawer-inner">
+                            <form action="/api/issues/<%= issue.id %>/update" method="POST" style="display: flex; flex-direction: column; gap: 14px;">
+                                <div class="form-group">
+                                    <label for="note-<%= issue.id %>">Update Note</label>
+                                    <textarea id="note-<%= issue.id %>" name="update_text" class="form-input" rows="3" placeholder="Describe what you've done or found…" required style="resize: vertical;"></textarea>
+                                </div>
+                                <div class="resolve-toggle">
+                                    <label><input type="radio" name="mark_resolved" value="false" checked> Still In Progress</label>
+                                    <label style="color: var(--accent-success);"><input type="radio" name="mark_resolved" value="true"> ✓ Mark as Resolved</label>
+                                </div>
+                                <div style="display: flex; justify-content: flex-end;">
+                                    <button type="submit" class="btn btn-primary" data-magnetic>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                                        Save Update
+                                    </button>
+                                </div>
+                            </form>
+                            <% if (issue.updates && issue.updates.length > 0) { %>
+                                <div>
+                                    <div style="font-size: var(--text-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;">Update History</div>
+                                    <% issue.updates.slice().reverse().forEach(u => { %>
+                                        <div class="update-item" style="margin-bottom: 8px;">
+                                            "<%= u.text %>"
+                                            <div class="update-meta"><%= new Date(u.timestamp).toLocaleString('en-IN') %> · <%= u.status_at_time %></div>
+                                        </div>
+                                    <% }); %>
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+            <% }); %>
+        </div>
+
+        <!-- Closed Issues -->
+        <% if (closed.length > 0) { %>
+        <div class="section-title" style="margin-bottom: var(--space-4);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-primary);"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            History
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <% closed.forEach(issue => { %>
+                <div class="inbox-card <%= issue.status === 'Resolved' ? 's-resolved' : 's-denied' %>" style="opacity: 0.7;">
+                    <div style="flex: 1;">
+                        <div style="font-size: 11px; color: var(--text-muted);">#<%= issue.id %> · <%= issue.project_name %></div>
+                        <div style="font-weight: 600; font-size: var(--text-sm); <%= issue.status === 'Resolved' ? 'text-decoration: line-through;' : '' %>"><%= issue.title %></div>
+                    </div>
+                    <span class="priority-chip <%= issue.status === 'Resolved' ? 'p-low' : '' %>" style="<%= issue.status === 'Denied' ? 'background: rgba(239,68,68,0.1); color: #f87171;' : '' %>">
+                        <%= issue.status %>
+                    </span>
+                </div>
+            <% }); %>
+        </div>
+        <% } %>
+
+    <% } %>
+    </div><!-- .content -->
+</div><!-- .shell -->
+
+<%- include('partials/scripts') %>
+<script>
+// ── Priority selector ────────────────────────────────────────────────────────
+function setPriority(val) {
+    document.getElementById('priority-input').value = val;
+    document.querySelectorAll('.priority-btn').forEach(btn => {
+        btn.className = 'priority-btn';
+        if (btn.dataset.val === val) btn.classList.add(`active-${val.toLowerCase()}`);
+    });
+}
+
+// Theme Toggle Logic
+const themeToggle = document.getElementById('theme-toggle');
+const themeIcon = document.getElementById('theme-icon');
+
+function updateThemeIcon(theme) {
+    if (theme === 'dark') {
+        // Moon icon for dark mode (click to go light)
+        themeIcon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
+    } else {
+        // Sun icon for light mode (click to go dark)
+        themeIcon.innerHTML = '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>';
+    }
+}
+
+// Initial set
+updateThemeIcon(document.documentElement.getAttribute('data-theme'));
+
+themeToggle.addEventListener('click', () => {
+    let currentTheme = document.documentElement.getAttribute('data-theme');
+    let newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    updateThemeIcon(newTheme);
+});
+
+// Magnetic Buttons
+document.querySelectorAll('[data-magnetic]').forEach(btn => {
+    // Logic for magnetic buttons would go here
+});
+
+// ── Expandable task drawer ────────────────────────────────────────────────────
+function toggleDrawer(id) {
+    const drawer  = document.getElementById(`drawer-${id}`);
+    const trigger = document.getElementById(`trigger-${id}`);
+    const chevron = document.getElementById(`chevron-${id}`);
+    const open = drawer.classList.toggle('open');
+    trigger.classList.toggle('open', open);
+    chevron.style.transform = open ? 'rotate(90deg)' : 'rotate(0deg)';
+}
+
+// ── Entrance animations ───────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    gsap.config({ nullTargetWarn: false });
+    gsap.fromTo('.kanban-col, .inbox-card, .active-task',
+        { y: 24, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.55, stagger: 0.06, ease: 'power2.out', delay: 0.1 }
+    );
+});
+
+// ── Toast helper ─────────────────────────────────────────────────────────────
+function showToast(msg, color) {
+    const t = document.getElementById('global-toast');
+    document.getElementById('global-toast-msg').textContent = msg;
+    if (color) t.style.background = color;
+    gsap.to(t, { y: 0, opacity: 1, duration: 0.5, ease: 'back.out(1.5)' });
+    setTimeout(() => gsap.to(t, { y: 80, opacity: 0, duration: 0.4, ease: 'power2.in' }), 5000);
+}
+
+// Show query-param toast (after form submit redirect)
+<% if (toast) { %>
+document.addEventListener('DOMContentLoaded', () => showToast('<%= toast %>'));
+<% } %>
+
+// ── Socket.io real-time ───────────────────────────────────────────────────────
+const socket = io();
+socket.emit('register', '<%= user.id %>');
+
+<% if (user.role === 'senior') { %>
+socket.on('issue_updated', (issue) => {
+    showToast(`${issue.updated_by} ${issue.status} issue #${issue.id}`, '#6366f1');
+    setTimeout(() => window.location.reload(), 1800);
+});
+<% } else { %>
+socket.on('new_issue', (issue) => {
+    showToast(`New assignment: "${issue.title}"`, '#f59e0b');
+    setTimeout(() => window.location.reload(), 1800);
+});
+<% } %>
+</script>

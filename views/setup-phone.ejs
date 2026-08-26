@@ -1,0 +1,89 @@
+<%- include('partials/head', { title: 'Setup — SystemCall' }) %>
+
+<style>
+.setup-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(ellipse at 60% 40%, rgba(16,185,129,0.08) 0%, transparent 60%),
+                var(--bg-primary);
+}
+.setup-card {
+    width: 100%;
+    max-width: 440px;
+    padding: 2.5rem;
+    background: rgba(23, 25, 30, 0.7);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+}
+.form-input {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    background: rgba(255,255,255,0.04);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    outline: none;
+    transition: border-color 150ms, box-shadow 150ms;
+}
+.form-input:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(16,185,129,0.15);
+}
+.error-box {
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    font-size: var(--text-sm);
+    color: #f87171;
+}
+</style>
+
+<div class="setup-wrapper">
+    <div class="setup-card" id="setup-card">
+        <div style="text-align: center; margin-bottom: var(--space-6);">
+            <div style="font-size: 2.5rem; margin-bottom: var(--space-2);">📱</div>
+            <h1 style="font-size: var(--text-2xl); margin-bottom: 6px;">One last step</h1>
+            <p style="color: var(--text-secondary); font-size: var(--text-sm);">
+                Hi <strong style="color: var(--text-primary);"><%= user.name %></strong>, enter your WhatsApp number to receive issue notifications.
+            </p>
+        </div>
+
+        <% if (error) { %>
+        <div class="error-box" style="margin-bottom: var(--space-4);"><%= error %></div>
+        <% } %>
+
+        <form action="/setup-phone" method="POST" style="display: flex; flex-direction: column; gap: var(--space-4);">
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+                <label for="phone-number" style="font-size: var(--text-sm); font-weight: 500; color: var(--text-secondary);">WhatsApp Phone Number</label>
+                <input
+                    id="phone-number"
+                    name="phone_number"
+                    type="tel"
+                    class="form-input"
+                    autocomplete="tel"
+                    placeholder="+919876543210"
+                    required
+                    pattern="^\+\d{10,15}$"
+                >
+                <span style="font-size: var(--text-xs); color: var(--text-muted);">Include country code (e.g. +91 for India)</span>
+            </div>
+            <button type="submit" class="btn btn-primary" data-magnetic style="padding: 12px; font-size: var(--text-base);">
+                Save & Continue →
+            </button>
+        </form>
+    </div>
+</div>
+
+<%- include('partials/scripts') %>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    gsap.fromTo('#setup-card', { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: 'power3.out' });
+});
+</script>
