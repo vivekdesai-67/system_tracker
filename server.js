@@ -373,8 +373,14 @@ app.get('/api/health', async (req, res) => {
 let dbInitialized = false;
 async function ensureDB() {
     if (!dbInitialized) {
+        console.log('Initializing database...');
+        if (!process.env.DATABASE_URL) {
+            console.error('❌ DATABASE_URL not set! Check environment variables.');
+            throw new Error('DATABASE_URL is required');
+        }
         await initDB();
         dbInitialized = true;
+        console.log('✅ Database initialized');
     }
 }
 
@@ -387,7 +393,7 @@ if (process.env.VERCEL) {
             next();
         } catch (err) {
             console.error('DB init error:', err);
-            next();
+            res.status(500).send('Database connection failed. Please check environment variables.');
         }
     });
     module.exports = app;
@@ -395,5 +401,8 @@ if (process.env.VERCEL) {
     // Local environment
     initDB().then(() => {
         server.listen(PORT, () => console.log(`\n🚀 SystemCall running at http://localhost:${PORT}\n`));
+    }).catch(err => {
+        console.error('❌ Failed to initialize database:', err.message);
+        process.exit(1);
     });
 }
