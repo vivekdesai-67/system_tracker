@@ -78,21 +78,40 @@ app.get('/login', (req, res) => {
 // POST /login
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
+    
+    console.log('[LOGIN] Attempt for username:', username);
+    
     try {
         const result = await pool.query('SELECT * FROM users WHERE username = $1 OR email = $1', [username.trim().toLowerCase()]);
-        if (result.rows.length === 0) return res.render('login', { error: 'Invalid username or password.' });
+        
+        if (result.rows.length === 0) {
+            console.log('[LOGIN] User not found:', username);
+            return res.render('login', { error: 'Invalid username or password.' });
+        }
 
         const user = result.rows[0];
+        console.log('[LOGIN] User found:', user.username, user.name);
+        
         const valid = await bcrypt.compare(password, user.password_hash);
-        if (!valid) return res.render('login', { error: 'Invalid username or password.' });
+        
+        if (!valid) {
+            console.log('[LOGIN] Invalid password for:', username);
+            return res.render('login', { error: 'Invalid username or password.' });
+        }
+        
+        console.log('[LOGIN] Password valid for:', username);
 
         const payload = { id: user.id, name: user.name, role: user.role, username: user.username, email: user.email };
         const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+        
+        console.log('[LOGIN] Token created for:', username);
+        
         res.cookie('token', token, { httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000 });
 
+        console.log('[LOGIN] Success! Redirecting to dashboard');
         res.redirect('/dashboard');
     } catch (err) {
-        console.error(err);
+        console.error('[LOGIN] Error:', err);
         res.render('login', { error: 'Server error. Please try again.' });
     }
 });
@@ -322,6 +341,28 @@ app.post('/api/admin/issues/:id/delete', requireAuth, requireAdmin, async (req, 
 app.get('/logout', (req, res) => {
     res.clearCookie('token');
     res.redirect('/login');
+});
+
+// DEBUG endpoint - check if server is working
+app.get('/api/health', async (req, res) => {
+    try {
+        const dbCheck = await pool.query('SELECT COUNT(*) FROM users');
+        res.json({
+            status: 'ok',
+            database: 'connected',
+            users: dbCheck.rows[0].count,
+            jwt_secret: process.env.JWT_SECRET ? 'set' : 'missing',
+            database_url: process.env.DATABASE_URL ? 'set' : 'missing',
+            vercel: process.env.VERCEL ? 'yes' : 'no'
+        });
+    } catch (err) {
+        res.status(500).json({
+            status: 'error',
+            message: err.message,
+            jwt_secret: process.env.JWT_SECRET ? 'set' : 'missing',
+            database_url: process.env.DATABASE_URL ? 'set' : 'missing'
+        });
+    }
 });
 
 
