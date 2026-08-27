@@ -51,19 +51,23 @@
 
 <%- include('partials/scripts') %>
 <script>
-  window.addEventListener('load', async function () {
-    await Clerk.load();
-    if (Clerk.isSignedIn) {
-        window.location.href = '/dashboard';
-    } else {
-        const signInDiv = document.getElementById('clerk-sign-in');
-        Clerk.mountSignIn(signInDiv, {
-            forceRedirectUrl: '/dashboard'
-        });
-    }
-  });
-
+  // Wait for Clerk to be defined on window
+  const initClerk = async () => {
+      if (!window.Clerk) {
+          setTimeout(initClerk, 50);
+          return;
+      }
+      await Clerk.load();
+      if (Clerk.isSignedIn) {
+          window.location.href = '/dashboard';
+      } else {
+          const signInDiv = document.getElementById('clerk-sign-in');
+          Clerk.mountSignIn(signInDiv, {
+              forceRedirectUrl: '/dashboard'
+          });
+      }
+  };
+  
+  window.addEventListener('load', initClerk);
   gsap.fromTo('.login-card', { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: 'power3.out' });
 </script>
-</body>
-</html>
