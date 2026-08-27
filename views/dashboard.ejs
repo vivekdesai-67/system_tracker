@@ -375,6 +375,115 @@
 
     <div class="content" id="main-content">
 
+    <!-- Project Filter / Search Bar -->
+    <div style="margin-bottom: 24px; display: flex; gap: 12px; align-items: center; background: var(--bg-secondary); padding: 16px 24px; border-radius: var(--radius-lg); border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+        <label for="projectFilter" style="font-weight: 600; font-size: 14px; color: var(--text-primary); white-space: nowrap;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:4px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            Search Project
+        </label>
+        <input type="text" id="projectFilter" list="projectsList" class="form-input" style="flex: 1;" placeholder="Type or select a project name to filter...">
+        <button onclick="filterProjects()" class="btn btn-primary" style="padding: 10px 24px;">Search</button>
+        <button onclick="clearProjectFilter()" class="btn btn-secondary" style="padding: 10px 24px;">Clear</button>
+    </div>
+
+    <datalist id="projectsList">
+        <option value="ATMO-1">
+        <option value="ATMO-2">
+        <option value="Crossweld-1">
+        <option value="Crossweld-2">
+        <option value="Vial Counting">
+        <option value="Knul Detection">
+        <option value="Wheel Variant">
+        <option value="PDI - Pune">
+        <option value="W- Sealant">
+        <option value="Cable Inspection">
+        <option value="POS -HYUNDAI">
+        <option value="Molex-Pin">
+        <option value="Cam-cap">
+        <option value="Mb-cap">
+        <option value="Engine Sealant">
+        <option value="JK fenner">
+        <option value="TVS Lucas">
+        <option value="Kia">
+        <option value="Dot Sealant">
+        <option value="TKAP Thermister">
+        <option value="P2-VIN">
+        <option value="P2-Roboline">
+        <option value="KeyOCR">
+        <option value="Wireless OCR">
+        <option value="CMPV - VIN">
+        <option value="Tag- OCR">
+        <option value="PDIR">
+        <option value="Lifestyle">
+        <option value="Cable-OCR">
+        <option value="Tyre-Inspection">
+        <option value="Channai- Weld bead">
+        <option value="Bawal- Weld bead">
+        <option value="Vanod- Weld bead">
+        <option value="Sonacomster- Human Detection">
+        <option value="Tata- Human Detection">
+        <option value="Valve hole Dia">
+        <option value="Powder coating">
+        <option value="Power Train 1">
+        <option value="Power Train 2">
+        <option value="Suzuki VIN">
+        <option value="Hero Motorcrop">
+        <option value="AGI heightmeasurement">
+        <option value="AGI Chockbore">
+        <option value="AGI Colour inspection">
+        <option value="JK Paper- wood interptment">
+        <option value="Valve lock Inspection-igatpuri">
+    </datalist>
+
+    <script>
+    function filterProjects() {
+        const val = document.getElementById('projectFilter').value.toLowerCase();
+        
+        document.querySelectorAll('.issue-card').forEach(card => {
+            const text = card.textContent.toLowerCase();
+            card.style.display = text.includes(val) ? 'block' : 'none';
+        });
+        
+        document.querySelectorAll('.inbox-card').forEach(card => {
+            const text = card.textContent.toLowerCase();
+            card.style.display = text.includes(val) ? 'flex' : 'none';
+        });
+        
+        document.querySelectorAll('.active-task').forEach(card => {
+            const text = card.textContent.toLowerCase();
+            card.style.display = text.includes(val) ? 'block' : 'none';
+        });
+        
+        document.querySelectorAll('.closed-task').forEach(card => {
+            const text = card.textContent.toLowerCase();
+            card.style.display = text.includes(val) ? 'flex' : 'none';
+        });
+    }
+
+    function clearProjectFilter() {
+        document.getElementById('projectFilter').value = '';
+        filterProjects();
+    }
+    
+    // Automatically trigger search when user hits "Enter" in the input
+    document.addEventListener('DOMContentLoaded', () => {
+        const input = document.getElementById('projectFilter');
+        if (input) {
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    filterProjects();
+                }
+            });
+            // Auto search on selection from datalist
+            input.addEventListener('input', () => {
+                filterProjects();
+            });
+        }
+    });
+    </script>
+
+
     <!-- ══════════════════════════════════════════════════════ -->
     <!-- SENIOR VIEW                                          -->
     <!-- ══════════════════════════════════════════════════════ -->
@@ -390,7 +499,7 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label for="project_name">Project Name</label>
-                        <input id="project_name" name="project_name" type="text" class="form-input" placeholder="e.g. Machine Vision QC" required autocomplete="off">
+                        <input id="project_name" name="project_name" list="projectsList" type="text" class="form-input" placeholder="Search or select a project..." required autocomplete="off">
                     </div>
                     <div class="form-group">
                         <label for="client_name">Client Name</label>
