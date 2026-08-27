@@ -487,8 +487,7 @@
             <form class="raise-form" action="/api/issues" method="POST" id="raise-form">
                 <div class="form-group">
                     <label for="project_name">Project Name</label>
-                    <div style="display: flex; gap: 8px;">
-                        <select id="project_name" name="project_name" class="form-input" required style="flex: 1;">
+                    <select id="project_name" name="project_name" class="form-input" required>
                         <option value="" disabled selected>Select a project...</option>
                         <option value="ATMO-1">ATMO-1</option>
                         <option value="ATMO-2">ATMO-2</option>
@@ -537,8 +536,6 @@
                         <option value="JK Paper- wood interptment">JK Paper- wood interptment</option>
                         <option value="Valve lock Inspection-igatpuri">Valve lock Inspection-igatpuri</option>
                     </select>
-                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('project_name').value = '';" style="padding: 0 16px;">Clear</button>
-                    </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
@@ -850,4 +847,31 @@ socket.on('new_issue', (issue) => {
 });
 <% } %>
 </script>
+
+<!-- Choices JS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+<style>
+.choices { margin-bottom: 0; } 
+.choices__inner { background-color: var(--bg-tertiary); border: 1px solid var(--border-subtle); border-radius: 12px; min-height: 48px; display: flex; align-items: center; } 
+.choices__input { background-color: transparent; color: var(--text-primary); } 
+.choices__list--dropdown { background-color: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: 12px; color: var(--text-primary); z-index: 100; } 
+.choices[data-type*="select-one"] .choices__button { filter: invert(1); } 
+.choices__list--dropdown .choices__item--selectable.is-highlighted { background-color: var(--accent-primary); color: white; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const el = document.getElementById('project_name');
+    if (el) {
+        new Choices(el, {
+            searchEnabled: true,
+            searchPlaceholderValue: 'Search projects...',
+            itemSelectText: '',
+            removeItemButton: true,
+            shouldSort: false
+        });
+    }
+});
+</script>
+
 <%- include('partials/scripts') %>
