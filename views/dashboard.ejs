@@ -852,11 +852,15 @@ socket.on('new_issue', (issue) => {
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 <style>
 .choices { margin-bottom: 0; } 
-.choices__inner { background-color: var(--bg-tertiary); border: 1px solid var(--border-subtle); border-radius: 12px; min-height: 48px; display: flex; align-items: center; } 
-.choices__input { background-color: transparent; color: var(--text-primary); } 
-.choices__list--dropdown { background-color: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: 12px; color: var(--text-primary); z-index: 100; } 
-.choices[data-type*="select-one"] .choices__button { filter: invert(1); } 
-.choices__list--dropdown .choices__item--selectable.is-highlighted { background-color: var(--accent-primary); color: white; }
+.choices__inner { background-color: var(--input-bg) !important; border: 1px solid var(--border-color) !important; border-radius: var(--radius-md) !important; min-height: 44px !important; display: flex !important; align-items: center !important; } 
+.choices.is-focused .choices__inner { border-color: var(--accent-primary) !important; box-shadow: 0 0 0 4px rgba(16,185,129,0.15) !important; }
+.choices__input { background-color: transparent !important; color: var(--text-primary) !important; } 
+.choices__input::placeholder { color: var(--text-muted) !important; }
+.choices__list--dropdown, .choices__list[aria-expanded] { background-color: var(--bg-secondary) !important; border: 1px solid var(--border-color) !important; border-radius: var(--radius-md) !important; color: var(--text-primary) !important; z-index: 100 !important; } 
+.choices__list--dropdown .choices__item { color: var(--text-primary) !important; }
+.choices[data-type*="select-one"] .choices__button { filter: invert(1) opacity(0.5) !important; } 
+.choices__list--dropdown .choices__item--selectable.is-highlighted { background-color: var(--accent-primary) !important; color: white !important; }
+.choices__list--dropdown .choices__item--choice { border-bottom: 1px solid var(--border-subtle) !important; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <script>
