@@ -57,14 +57,10 @@
           return;
       }
       await Clerk.load();
-      if (Clerk.isSignedIn) {
-          window.location.href = '/dashboard';
-      } else {
-          const signInDiv = document.getElementById('clerk-sign-in');
-          Clerk.mountSignIn(signInDiv, {
-              forceRedirectUrl: '/dashboard'
-          });
-      }
+      const signInDiv = document.getElementById('clerk-sign-in');
+      Clerk.mountSignIn(signInDiv, {
+          forceRedirectUrl: '/dashboard'
+      });
   };
   
   window.addEventListener('load', initClerk);
