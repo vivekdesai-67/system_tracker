@@ -325,10 +325,6 @@ app.get('/logout', (req, res) => {
 });
 
 
-app.use((err, req, res, next) => {
-    console.error("Express Global Error:", err);
-    res.status(500).send("Internal Server Error from Express.");
-});
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 if (process.env.VERCEL) {
