@@ -33,77 +33,16 @@ app.use(express.static(path.join(__dirname, 'public')));
 const { createClerkClient } = require('@clerk/express');
 const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
 
-async function requireAuth(req, res, next) {
-    console.log("--- requireAuth:", req.path, "| clerk userId:", req.auth?.userId || 'none');
-
-    if (req.auth && req.auth.userId) {
-        try {
-            const clerkUserId = req.auth.userId;
-
-            // 1. Try find by clerk_id
-            let result = await pool.query('SELECT * FROM users WHERE clerk_id = $1', [clerkUserId]);
-            if (result.rows.length > 0) {
-                req.user = result.rows[0];
-                return next();
-            }
-
-            // 2. Get email from req.auth session claims (no external API call needed)
-            //    Clerk puts email in sessionClaims.email when configured, otherwise fall back to API
-            let email = null;
-            let name = 'New User';
-
-            try {
-                // Try the Clerk API for email/name (works on Vercel/real network)
-                const clerkUser = await clerkClient.users.getUser(clerkUserId);
-                email = clerkUser.emailAddresses[0]?.emailAddress;
-                name = ((clerkUser.firstName || '') + ' ' + (clerkUser.lastName || '')).trim() || 'New User';
-                console.log("Got from Clerk API:", email, name);
-            } catch (apiErr) {
-                // Fallback: try session claims
-                email = req.auth.sessionClaims?.email || req.auth.sessionClaims?.['email'] || null;
-                name = req.auth.sessionClaims?.name || 'New User';
-                console.warn("Clerk API unavailable, using session claims. email:", email);
-            }
-
-            // 3. Try match by email
-            if (email) {
-                result = await pool.query('SELECT * FROM users WHERE email = $1 ORDER BY id ASC LIMIT 1', [email]);
-                if (result.rows.length > 0) {
-                    await pool.query('UPDATE users SET clerk_id = $1 WHERE id = $2', [clerkUserId, result.rows[0].id]);
-                    req.user = result.rows[0];
-                    return next();
-                }
-            }
-
-            // 4. Create new user
-            const username = email || clerkUserId;
-            const insertRes = await pool.query(`
-                INSERT INTO users (name, role, username, password_hash, email, clerk_id)
-                VALUES ($1, 'junior', $2, 'clerk_managed', $3, $4)
-                ON CONFLICT (clerk_id) DO UPDATE SET name = EXCLUDED.name
-                RETURNING *
-            `, [name, username, email, clerkUserId]);
-            req.user = insertRes.rows[0];
-            console.log("Created/updated user:", req.user.id, req.user.name);
-            return next();
-        } catch (e) {
-            console.error('requireAuth Clerk sync error:', e.message);
-            return res.redirect('/login');
-        }
-    }
-
-    // Fallback: legacy JWT cookie
+function requireAuth(req, res, next) {
     const token = req.cookies.token;
     if (!token) return res.redirect('/login');
     try {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        decoded.id = parseInt(decoded.id);
-        if (isNaN(decoded.id)) { res.clearCookie('token'); return res.redirect('/login'); }
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
         req.user = decoded;
         next();
-    } catch {
+    } catch (err) {
         res.clearCookie('token');
-        res.redirect('/login');
+        return res.redirect('/login');
     }
 }
 
@@ -137,17 +76,8 @@ app.get('/', (req, res) => res.redirect('/dashboard'));
 
 // GET /login
 app.get('/login', (req, res) => {
-    // If Clerk session exists, skip to dashboard
-    if (req.auth && req.auth.userId) return res.redirect('/dashboard');
     if (req.cookies.token) return res.redirect('/dashboard');
     res.render('login', { error: null });
-});
-
-app.get('/test-auth', (req, res, next) => {
-    req.auth = { userId: 'user_3IRezBmnhmApBVK3kFxcRA9VwQN', sessionClaims: { email: 'test_sso@gmail.com', name: 'SSO Test' } };
-    next();
-}, requireAuth, (req, res) => {
-    res.json({ success: true, user: req.user });
 });
 
 // POST /login
