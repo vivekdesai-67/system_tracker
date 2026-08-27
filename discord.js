@@ -1,4 +1,3 @@
-const fetch = require('node-fetch'); // we can just use global fetch in Node 26
 
 async function sendDiscordWebhook(message, color = 0x3b82f6) {
     const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
