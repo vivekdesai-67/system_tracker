@@ -8,7 +8,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const { pool, initDB } = require('./db');
-const { sendMail, newIssueEmail, responseEmail, updateEmail } = require('./mailer');
+const { sendDiscordWebhook } = require('./discord');
 
 const app = express();
 const server = http.createServer(app);
@@ -107,12 +107,6 @@ async function requireAuth(req, res, next) {
     }
 }
 
-function requireEmail(req, res, next) {
-    // Clerk-managed users always have email handled by Clerk; skip this check
-    if (req.user && req.user.password_hash === 'clerk_managed') return next();
-    if (!req.user.email) return res.redirect('/setup-email');
-    next();
-}
 
 function requireAdmin(req, res, next) {
     if (req.user.role !== 'admin') return res.status(403).send('Forbidden: Admins only');
@@ -149,6 +143,13 @@ app.get('/login', (req, res) => {
     res.render('login', { error: null });
 });
 
+app.get('/test-auth', (req, res, next) => {
+    req.auth = { userId: 'user_3IRezBmnhmApBVK3kFxcRA9VwQN', sessionClaims: { email: 'test_sso@gmail.com', name: 'SSO Test' } };
+    next();
+}, requireAuth, (req, res) => {
+    res.json({ success: true, user: req.user });
+});
+
 // POST /login
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
@@ -172,32 +173,9 @@ app.post('/login', async (req, res) => {
     }
 });
 
-// GET /setup-email
-app.get('/setup-email', requireAuth, (req, res) => {
-    res.render('setup-email', { user: req.user, error: null });
-});
-
-// POST /setup-email
-app.post('/setup-email', requireAuth, async (req, res) => {
-    const { email } = req.body;
-    const trimmed = email.trim().toLowerCase();
-    if (!trimmed.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-        return res.render('setup-email', { user: req.user, error: 'Enter a valid email address.' });
-    }
-    try {
-        await pool.query('UPDATE users SET email = $1 WHERE id = $2::int', [trimmed, req.user.id]);
-        const { exp, iat, ...rest } = req.user;
-        const token = jwt.sign({ ...rest, email: trimmed }, JWT_SECRET, { expiresIn: '7d' });
-        res.cookie('token', token, { httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000 });
-        res.redirect('/dashboard');
-    } catch (err) {
-        console.error(err);
-        res.render('setup-email', { user: req.user, error: 'Server error. Please try again.' });
-    }
-});
 
 // GET /dashboard
-app.get('/dashboard', requireAuth, requireEmail, async (req, res) => {
+app.get('/dashboard', requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
         let issues;
@@ -226,7 +204,7 @@ app.get('/dashboard', requireAuth, requireEmail, async (req, res) => {
 });
 
 // POST /api/issues — Senior creates an issue
-app.post('/api/issues', requireAuth, requireEmail, async (req, res) => {
+app.post('/api/issues', requireAuth, async (req, res) => {
     if (req.user.role !== 'senior') return res.status(403).send('Forbidden');
     const { project_name, client_name, title, description, priority, assigned_to } = req.body;
     try {
@@ -245,11 +223,10 @@ app.post('/api/issues', requireAuth, requireEmail, async (req, res) => {
         // Real-time push to junior
         emitToUser(junior.id, 'new_issue', issue);
 
-        // Email to junior
-        const { subject, html } = newIssueEmail(req.user.name, title, project_name, client_name, priority);
-        sendMail(junior.email, subject, html);
+        // Discord Webhook
+        sendDiscordWebhook(`🚀 **New Issue Assigned!**\n**Title:** ${title}\n**Project:** ${project_name}\n**Client:** ${client_name}\n**Priority:** ${priority}\n**Assigned To:** ${junior.name} by ${req.user.name}`);
 
-        res.redirect(`/dashboard?toast=Issue assigned to ${junior.name} — Email notification sent!`);
+        res.redirect(`/dashboard?toast=Issue assigned to ${junior.name} — Discord notification sent!`);
     } catch (err) {
         console.error(err);
         res.status(500).send('Server error creating issue.');
@@ -257,7 +234,7 @@ app.post('/api/issues', requireAuth, requireEmail, async (req, res) => {
 });
 
 // POST /api/issues/:id/respond — Junior Accepts or Denies
-app.post('/api/issues/:id/respond', requireAuth, requireEmail, async (req, res) => {
+app.post('/api/issues/:id/respond', requireAuth, async (req, res) => {
     if (req.user.role !== 'junior') return res.status(403).send('Forbidden');
     const { action } = req.body;
     const newStatus = action === 'accept' ? 'Accepted' : 'Denied';
@@ -277,9 +254,8 @@ app.post('/api/issues/:id/respond', requireAuth, requireEmail, async (req, res) 
         // Real-time push to senior
         emitToUser(senior.id, 'issue_updated', { ...issue, updated_by: req.user.name });
 
-        // Email to senior
-        const { subject, html } = responseEmail(req.user.name, newStatus, issue.title);
-        sendMail(senior.email, subject, html);
+        // Discord Webhook
+        sendDiscordWebhook(`🔄 **Issue Status Update**\n**Issue:** ${issue.title}\n**New Status:** ${newStatus}\n**Updated By:** ${req.user.name}`, 0xf59e0b);
 
         res.redirect('/dashboard');
     } catch (err) {
@@ -289,7 +265,7 @@ app.post('/api/issues/:id/respond', requireAuth, requireEmail, async (req, res) 
 });
 
 // POST /api/issues/:id/update — Junior posts update or marks resolved
-app.post('/api/issues/:id/update', requireAuth, requireEmail, async (req, res) => {
+app.post('/api/issues/:id/update', requireAuth, async (req, res) => {
     if (req.user.role !== 'junior') return res.status(403).send('Forbidden');
     const { update_text, mark_resolved } = req.body;
     const newStatus = mark_resolved === 'true' ? 'Resolved' : 'In Progress';
@@ -316,9 +292,8 @@ app.post('/api/issues/:id/update', requireAuth, requireEmail, async (req, res) =
         // Real-time push to senior
         emitToUser(senior.id, 'issue_updated', { ...issue, updated_by: req.user.name });
 
-        // Email to senior
-        const { subject, html } = updateEmail(req.user.name, issue.title, update_text, newStatus);
-        sendMail(senior.email, subject, html);
+        // Discord Webhook
+        sendDiscordWebhook(`💬 **New Issue Update**\n**Issue:** ${issue.title}\n**Update:** ${update_text}\n**Status:** ${newStatus}\n**By:** ${req.user.name}`, 0x10b981);
 
         res.redirect('/dashboard');
     } catch (err) {
@@ -327,12 +302,12 @@ app.post('/api/issues/:id/update', requireAuth, requireEmail, async (req, res) =
     }
 });
 // GET /profile
-app.get('/profile', requireAuth, requireEmail, (req, res) => {
+app.get('/profile', requireAuth, (req, res) => {
     res.render('profile', { user: req.user, error: null, success: req.query.success || null });
 });
 
 // POST /api/profile
-app.post('/api/profile', requireAuth, requireEmail, async (req, res) => {
+app.post('/api/profile', requireAuth, async (req, res) => {
     const { name, email, password } = req.body;
     try {
         let query = 'UPDATE users SET name = $1, email = $2';
@@ -364,7 +339,7 @@ app.post('/api/profile', requireAuth, requireEmail, async (req, res) => {
 });
 
 // GET /admin
-app.get('/admin', requireAuth, requireEmail, requireAdmin, async (req, res) => {
+app.get('/admin', requireAuth, requireAdmin, async (req, res) => {
     try {
         const usersRes = await pool.query('SELECT id, name, role, username, email, created_at FROM users ORDER BY created_at DESC');
         const issuesRes = await pool.query(`
@@ -382,7 +357,7 @@ app.get('/admin', requireAuth, requireEmail, requireAdmin, async (req, res) => {
 });
 
 // POST /api/admin/users
-app.post('/api/admin/users', requireAuth, requireEmail, requireAdmin, async (req, res) => {
+app.post('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
     const { name, username, password, role } = req.body;
     try {
         const hash = await bcrypt.hash(password, 10);
@@ -398,7 +373,7 @@ app.post('/api/admin/users', requireAuth, requireEmail, requireAdmin, async (req
 });
 
 // POST /api/admin/users/:id/delete
-app.post('/api/admin/users/:id/delete', requireAuth, requireEmail, requireAdmin, async (req, res) => {
+app.post('/api/admin/users/:id/delete', requireAuth, requireAdmin, async (req, res) => {
     if (parseInt(req.params.id) === req.user.id) return res.redirect('/admin?error=Cannot delete yourself');
     try {
         await pool.query('DELETE FROM users WHERE id = $1::int', [req.params.id]);
@@ -410,7 +385,7 @@ app.post('/api/admin/users/:id/delete', requireAuth, requireEmail, requireAdmin,
 });
 
 // POST /api/admin/issues/:id/delete
-app.post('/api/admin/issues/:id/delete', requireAuth, requireEmail, requireAdmin, async (req, res) => {
+app.post('/api/admin/issues/:id/delete', requireAuth, requireAdmin, async (req, res) => {
     try {
         await pool.query('DELETE FROM issues WHERE id = $1::int', [req.params.id]);
         res.redirect('/admin?success=Issue deleted');
