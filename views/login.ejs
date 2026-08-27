@@ -49,7 +49,6 @@
     </div>
 </div>
 
-<%- include('partials/scripts') %>
 <script>
   // Wait for Clerk to be defined on window
   const initClerk = async () => {
@@ -69,5 +68,12 @@
   };
   
   window.addEventListener('load', initClerk);
-  gsap.fromTo('.login-card', { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: 'power3.out' });
+  
+  document.addEventListener('DOMContentLoaded', () => {
+      if (window.gsap) {
+          gsap.fromTo('.login-card', { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: 'power3.out' });
+      }
+  });
 </script>
+
+<%- include('partials/scripts') %>

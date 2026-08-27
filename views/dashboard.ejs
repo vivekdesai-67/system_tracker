@@ -607,15 +607,19 @@
     </div><!-- .content -->
 </div><!-- .shell -->
 
-<%- include('partials/scripts') %>
 <script>
-    window.addEventListener('load', async function () {
+    const initClerkDashboard = async () => {
+        if (!window.Clerk) {
+            setTimeout(initClerkDashboard, 50);
+            return;
+        }
         await Clerk.load();
         if (Clerk.isSignedIn) {
             const userButtonDiv = document.getElementById('user-button');
             Clerk.mountUserButton(userButtonDiv);
         }
-    });
+    };
+    window.addEventListener('load', initClerkDashboard);
 
     const currentUserId = <%= user.id %>;
     const currentUserRole = '<%= user.role %>';
@@ -709,3 +713,4 @@ socket.on('new_issue', (issue) => {
 });
 <% } %>
 </script>
+<%- include('partials/scripts') %>
