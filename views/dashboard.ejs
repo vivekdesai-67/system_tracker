@@ -487,7 +487,8 @@
             <form class="raise-form" action="/api/issues" method="POST" id="raise-form">
                 <div class="form-group">
                     <label for="project_name">Project Name</label>
-                    <select id="project_name" name="project_name" class="form-input" required>
+                    <div style="display: flex; gap: 8px;">
+                        <select id="project_name" name="project_name" class="form-input" required style="flex: 1;">
                         <option value="" disabled selected>Select a project...</option>
                         <option value="ATMO-1">ATMO-1</option>
                         <option value="ATMO-2">ATMO-2</option>
@@ -536,6 +537,8 @@
                         <option value="JK Paper- wood interptment">JK Paper- wood interptment</option>
                         <option value="Valve lock Inspection-igatpuri">Valve lock Inspection-igatpuri</option>
                     </select>
+                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('project_name').value = '';" style="padding: 0 16px;">Clear</button>
+                    </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
