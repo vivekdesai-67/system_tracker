@@ -15,23 +15,18 @@ const server = http.createServer(app);
 const io = new Server(server);
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
-app.locals.clerkPublishableKey = process.env.CLERK_PUBLISHABLE_KEY;
 
 // ─── Middleware ────────────────────────────────────────────────────────────────
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 
-const { clerkMiddleware } = require("@clerk/express");
-app.use(clerkMiddleware());
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ─── Auth Middleware ───────────────────────────────────────────────────────────
-const { createClerkClient } = require('@clerk/express');
-const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
 
 function requireAuth(req, res, next) {
     const token = req.cookies.token;
