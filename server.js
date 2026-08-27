@@ -112,7 +112,7 @@ app.post('/login', async (req, res) => {
         res.redirect('/dashboard');
     } catch (err) {
         console.error('[LOGIN] Error:', err);
-        res.render('login', { error: 'Server error. Please try again.' });
+        res.render('login', { error: 'Server error: ' + err.message });
     }
 });
 
