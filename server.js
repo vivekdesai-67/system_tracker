@@ -90,7 +90,6 @@ app.post('/login', async (req, res) => {
         const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
         res.cookie('token', token, { httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000 });
 
-        if (!user.email) return res.redirect('/setup-email');
         res.redirect('/dashboard');
     } catch (err) {
         console.error(err);
@@ -330,7 +329,7 @@ if (process.env.VERCEL) {
     // Vercel serverless environment
     // Note: initDB() might take time, but we just export the app immediately for Vercel
     initDB().catch(console.error);
-    module.exports = server;
+    module.exports = app;
 } else {
     // Local environment
     initDB().then(() => {
