@@ -496,15 +496,57 @@
         </div>
         <div class="glass" style="margin-bottom: 40px;">
             <form class="raise-form" action="/api/issues" method="POST" id="raise-form">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="project_name">Project Name</label>
-                        <input id="project_name" name="project_name" list="projectsList" type="text" class="form-input" placeholder="Search or select a project..." required autocomplete="off">
-                    </div>
-                    <div class="form-group">
-                        <label for="client_name">Client Name</label>
-                        <input id="client_name" name="client_name" type="text" class="form-input" placeholder="e.g. Tata Motors" required autocomplete="off">
-                    </div>
+                <div class="form-group">
+                    <label for="project_name">Project Name</label>
+                    <select id="project_name" name="project_name" class="form-input" required>
+                        <option value="" disabled selected>Select a project...</option>
+                        <option value="ATMO-1">ATMO-1</option>
+                        <option value="ATMO-2">ATMO-2</option>
+                        <option value="Crossweld-1">Crossweld-1</option>
+                        <option value="Crossweld-2">Crossweld-2</option>
+                        <option value="Vial Counting">Vial Counting</option>
+                        <option value="Knul Detection">Knul Detection</option>
+                        <option value="Wheel Variant">Wheel Variant</option>
+                        <option value="PDI - Pune">PDI - Pune</option>
+                        <option value="W- Sealant">W- Sealant</option>
+                        <option value="Cable Inspection">Cable Inspection</option>
+                        <option value="POS -HYUNDAI">POS -HYUNDAI</option>
+                        <option value="Molex-Pin">Molex-Pin</option>
+                        <option value="Cam-cap">Cam-cap</option>
+                        <option value="Mb-cap">Mb-cap</option>
+                        <option value="Engine Sealant">Engine Sealant</option>
+                        <option value="JK fenner">JK fenner</option>
+                        <option value="TVS Lucas">TVS Lucas</option>
+                        <option value="Kia">Kia</option>
+                        <option value="Dot Sealant">Dot Sealant</option>
+                        <option value="TKAP Thermister">TKAP Thermister</option>
+                        <option value="P2-VIN">P2-VIN</option>
+                        <option value="P2-Roboline">P2-Roboline</option>
+                        <option value="KeyOCR">KeyOCR</option>
+                        <option value="Wireless OCR">Wireless OCR</option>
+                        <option value="CMPV - VIN">CMPV - VIN</option>
+                        <option value="Tag- OCR">Tag- OCR</option>
+                        <option value="PDIR">PDIR</option>
+                        <option value="Lifestyle">Lifestyle</option>
+                        <option value="Cable-OCR">Cable-OCR</option>
+                        <option value="Tyre-Inspection">Tyre-Inspection</option>
+                        <option value="Channai- Weld bead">Channai- Weld bead</option>
+                        <option value="Bawal- Weld bead">Bawal- Weld bead</option>
+                        <option value="Vanod- Weld bead">Vanod- Weld bead</option>
+                        <option value="Sonacomster- Human Detection">Sonacomster- Human Detection</option>
+                        <option value="Tata- Human Detection">Tata- Human Detection</option>
+                        <option value="Valve hole Dia">Valve hole Dia</option>
+                        <option value="Powder coating">Powder coating</option>
+                        <option value="Power Train 1">Power Train 1</option>
+                        <option value="Power Train 2">Power Train 2</option>
+                        <option value="Suzuki VIN">Suzuki VIN</option>
+                        <option value="Hero Motorcrop">Hero Motorcrop</option>
+                        <option value="AGI heightmeasurement">AGI heightmeasurement</option>
+                        <option value="AGI Chockbore">AGI Chockbore</option>
+                        <option value="AGI Colour inspection">AGI Colour inspection</option>
+                        <option value="JK Paper- wood interptment">JK Paper- wood interptment</option>
+                        <option value="Valve lock Inspection-igatpuri">Valve lock Inspection-igatpuri</option>
+                    </select>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
