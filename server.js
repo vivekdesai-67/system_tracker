@@ -327,10 +327,28 @@ app.get('/logout', (req, res) => {
 
 
 // ─── Start ────────────────────────────────────────────────────────────────────
+
+// Initialize database once
+let dbInitialized = false;
+async function ensureDB() {
+    if (!dbInitialized) {
+        await initDB();
+        dbInitialized = true;
+    }
+}
+
 if (process.env.VERCEL) {
     // Vercel serverless environment
-    // Note: initDB() might take time, but we just export the app immediately for Vercel
-    initDB().catch(console.error);
+    // Initialize DB on first request via middleware
+    app.use(async (req, res, next) => {
+        try {
+            await ensureDB();
+            next();
+        } catch (err) {
+            console.error('DB init error:', err);
+            next();
+        }
+    });
     module.exports = app;
 } else {
     // Local environment
