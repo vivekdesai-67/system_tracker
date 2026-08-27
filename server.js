@@ -79,7 +79,7 @@ app.get('/login', (req, res) => {
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
     try {
-        const result = await pool.query('SELECT * FROM users WHERE username = $1', [username.trim().toLowerCase()]);
+        const result = await pool.query('SELECT * FROM users WHERE username = $1 OR email = $1', [username.trim().toLowerCase()]);
         if (result.rows.length === 0) return res.render('login', { error: 'Invalid username or password.' });
 
         const user = result.rows[0];
@@ -322,6 +322,12 @@ app.post('/api/admin/issues/:id/delete', requireAuth, requireAdmin, async (req, 
 app.get('/logout', (req, res) => {
     res.clearCookie('token');
     res.redirect('/login');
+});
+
+
+app.use((err, req, res, next) => {
+    console.error("Express Global Error:", err);
+    res.status(500).send("Internal Server Error from Express.");
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────
