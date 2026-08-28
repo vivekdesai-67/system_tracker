@@ -45,11 +45,6 @@ function requireAdmin(req, res, next) {
     next();
 }
 
-    socket.on('disconnect', () => {
-        for (const [userId, sids] of userSockets.entries()) sids.delete(socket.id);
-    });
-});
-
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
