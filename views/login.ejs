@@ -51,8 +51,26 @@
     border: none; border-radius: 12px;
     font-size: 1rem; font-weight: 600; font-family: inherit;
     cursor: pointer; transition: all 0.2s ease;
+    position: relative;
 }
 .submit-btn:hover { background: #0ea5e9; transform: translateY(-2px); }
+.submit-btn:disabled { background: #6b7280; cursor: not-allowed; transform: none; }
+.submit-btn.loading::after {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    right: 20px;
+    margin-top: -8px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spinner 0.6s linear infinite;
+}
+@keyframes spinner {
+    to { transform: rotate(360deg); }
+}
 </style>
 
 <div class="login-wrapper">
@@ -88,6 +106,16 @@
       if (window.gsap) {
           gsap.fromTo('.login-card', { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: 'power3.out' });
       }
+      
+      // Add loading state to form submission
+      const form = document.querySelector('form');
+      const submitBtn = form.querySelector('.submit-btn');
+      
+      form.addEventListener('submit', function() {
+          submitBtn.classList.add('loading');
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Authenticating...';
+      });
   });
 </script>
 

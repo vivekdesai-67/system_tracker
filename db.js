@@ -9,7 +9,15 @@ if (!process.env.DATABASE_URL) {
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
+    ssl: { rejectUnauthorized: false },
+    max: 20, // Maximum number of clients in the pool
+    idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
+    connectionTimeoutMillis: 5000, // Return an error after 5 seconds if connection could not be established
+});
+
+// Test connection on startup
+pool.on('error', (err) => {
+    console.error('Unexpected error on idle database client', err);
 });
 
 async function initDB() {
@@ -44,6 +52,11 @@ async function initDB() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+            
+            CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+            CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+            CREATE INDEX IF NOT EXISTS idx_issues_created_by ON issues(created_by);
+            CREATE INDEX IF NOT EXISTS idx_issues_assigned_to ON issues(assigned_to);
         `);
         
         // Auto-seed admin and all default users

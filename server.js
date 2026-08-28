@@ -103,26 +103,39 @@ app.get('/dashboard', requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
         let issues;
+        
+        const startTime = Date.now();
+        
         if (req.user.role === 'senior') {
             const result = await pool.query(`
                 SELECT i.*, u.name AS assigned_name, u.email AS assigned_email
-                FROM issues i JOIN users u ON u.id = i.assigned_to
-                WHERE i.created_by = $1::int ORDER BY i.created_at DESC
+                FROM issues i 
+                JOIN users u ON u.id = i.assigned_to
+                WHERE i.created_by = $1::int 
+                ORDER BY i.created_at DESC
+                LIMIT 100
             `, [userId]);
             issues = result.rows;
         } else {
             const result = await pool.query(`
                 SELECT i.*, u.name AS created_name, u.email AS senior_email
-                FROM issues i JOIN users u ON u.id = i.created_by
-                WHERE i.assigned_to = $1::int ORDER BY i.created_at DESC
+                FROM issues i 
+                JOIN users u ON u.id = i.created_by
+                WHERE i.assigned_to = $1::int 
+                ORDER BY i.created_at DESC
+                LIMIT 100
             `, [userId]);
             issues = result.rows;
         }
 
         const juniorsResult = await pool.query("SELECT id, name FROM users WHERE role = 'junior' ORDER BY name");
+        
+        const duration = Date.now() - startTime;
+        console.log(`[DASHBOARD] Loaded in ${duration}ms for ${req.user.username}`);
+        
         res.render('dashboard', { user: req.user, issues, juniors: juniorsResult.rows, toast: req.query.toast || null });
     } catch (err) {
-        console.error(err);
+        console.error('[DASHBOARD] Error:', err);
         res.status(500).send('Server error loading dashboard.');
     }
 });
@@ -389,33 +402,45 @@ app.get('/api/health', async (req, res) => {
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 
-// Initialize database once
+// Initialize database once (cached across requests in serverless)
 let dbInitialized = false;
+let dbInitPromise = null;
+
 async function ensureDB() {
-    if (!dbInitialized) {
-        console.log('Initializing database...');
+    if (dbInitialized) return;
+    
+    if (dbInitPromise) {
+        // If already initializing, wait for it
+        await dbInitPromise;
+        return;
+    }
+    
+    dbInitPromise = (async () => {
+        console.log('[INIT] Starting database initialization...');
+        const startTime = Date.now();
+        
         if (!process.env.DATABASE_URL) {
             console.error('❌ DATABASE_URL not set! Check environment variables.');
             throw new Error('DATABASE_URL is required');
         }
+        
         await initDB();
         dbInitialized = true;
-        console.log('✅ Database initialized');
-    }
+        
+        const duration = Date.now() - startTime;
+        console.log(`✅ Database initialized in ${duration}ms`);
+    })();
+    
+    await dbInitPromise;
 }
 
 if (process.env.VERCEL) {
     // Vercel serverless environment
-    // Initialize DB on first request via middleware
-    app.use(async (req, res, next) => {
-        try {
-            await ensureDB();
-            next();
-        } catch (err) {
-            console.error('DB init error:', err);
-            res.status(500).send('Database connection failed. Please check environment variables.');
-        }
+    // Initialize DB once on module load (cached across warm starts)
+    ensureDB().catch(err => {
+        console.error('Failed to initialize database:', err);
     });
+    
     module.exports = app;
 } else {
     // Local environment
