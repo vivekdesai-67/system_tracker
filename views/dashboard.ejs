@@ -612,22 +612,24 @@
                             <div class="issue-id">#<%= issue.id %> · <%= issue.project_name %><% if(issue.client_name){ %> · <span style="color:var(--accent-secondary)"><%= issue.client_name %></span><% } %></div>
                             <div class="issue-title" style="margin-bottom: 0;"><%= issue.title %></div>
                             <div class="issue-details">
-                                <div class="issue-meta">
-                                    <span class="priority-chip p-<%= issue.priority.toLowerCase() %>"><%= issue.priority %></span>
-                                    <span class="assignee-chip">👤 <%= issue.assigned_name %></span>
+                                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                                    <div class="issue-meta" style="margin-top: 0; margin-bottom: 0;">
+                                        <span class="priority-chip p-<%= issue.priority.toLowerCase() %>"><%= issue.priority %></span>
+                                        <span class="assignee-chip">👤 <%= issue.assigned_name %></span>
+                                    </div>
+                                    <div style="display: flex; gap: 8px;" onclick="event.stopPropagation()">
+                                        <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;" onclick="openEditModal(<%= issue.id %>, '<%= escape(issue.title.replace(/'/g, "\'")) %>', '<%= escape(issue.project_name.replace(/'/g, "\'")) %>', <%= issue.assigned_to %>, '<%= issue.priority %>')">Update</button>
+                                        <form action="/api/issues/<%= issue.id %>/delete" method="POST" style="margin:0;" onsubmit="return confirm('Are you sure you want to delete this issue?');">
+                                            <button type="submit" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; color: #ef4444; border-color: rgba(239,68,68,0.3);">Delete</button>
+                                        </form>
+                                    </div>
                                 </div>
                                 <% if (issue.updates && issue.updates.length > 0) { %>
-                                    <div class="update-item" style="margin-top: 10px; font-size: 12px;">
+                                    <div class="update-item" style="margin-top: 12px; font-size: 12px;">
                                         "<%= issue.updates[issue.updates.length-1].text %>"
                                         <div class="update-meta"><%= new Date(issue.updates[issue.updates.length-1].timestamp).toLocaleString('en-IN') %></div>
                                     </div>
                                 <% } %>
-                                <div style="display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end;" onclick="event.stopPropagation()">
-                                    <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;" onclick="openEditModal(<%= issue.id %>, '<%= escape(issue.title.replace(/'/g, "\'")) %>', '<%= escape(issue.project_name.replace(/'/g, "\'")) %>', <%= issue.assigned_to %>, '<%= issue.priority %>')">Update</button>
-                                    <form action="/api/issues/<%= issue.id %>/delete" method="POST" style="margin:0;" onsubmit="return confirm('Are you sure you want to delete this issue?');">
-                                        <button type="submit" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; color: #ef4444; border-color: rgba(239,68,68,0.3);">Delete</button>
-                                    </form>
-                                </div>
                             </div>
                         </div>
                     <% }); %>
