@@ -167,7 +167,7 @@ app.post('/api/issues', requireAuth, async (req, res) => {
         emitToUser(junior.id, 'new_issue', issue);
 
         // Discord Webhook
-        await sendDiscordWebhook(`🚀 **New Issue Assigned!**\n**Title:** ${title}\n**Project:** ${project_name}\n**Client:** ${client_name}\n**Priority:** ${priority}\n**Assigned To:** ${junior.name} by ${req.user.name}`);
+        await sendDiscordWebhook(`🚀 **New Issue Assigned!**\n**Title:** ${title}\n**Project:** ${project_name}\n**Priority:** ${priority}\n**Assigned To:** ${junior.name} by ${req.user.name}`);
 
         res.redirect(`/dashboard?toast=Issue assigned to ${junior.name} — Discord notification sent!`);
     } catch (err) {
