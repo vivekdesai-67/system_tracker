@@ -346,6 +346,18 @@ app.post('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // POST /api/admin/users/:id/delete
+
+app.post('/api/admin/users/:id/edit', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const { name, role } = req.body;
+        await pool.query('UPDATE users SET name = $1, role = $2 WHERE id = $3', [name, role, req.params.id]);
+        res.redirect('/admin?toast=User updated successfully');
+    } catch (err) {
+        console.error(err);
+        res.redirect('/admin?error=Failed to update user');
+    }
+});
+
 app.post('/api/admin/users/:id/delete', requireAuth, requireAdmin, async (req, res) => {
     if (parseInt(req.params.id) === req.user.id) return res.redirect('/admin?error=Cannot delete yourself');
     try {
