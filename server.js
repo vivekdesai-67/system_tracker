@@ -1,7 +1,6 @@
 require('dotenv').config();
 const express = require('express');
 const http = require('http');
-const { Server } = require('socket.io');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const bcrypt = require('bcryptjs');
@@ -12,7 +11,6 @@ const { sendDiscordWebhook } = require('./discord');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
 
@@ -47,23 +45,11 @@ function requireAdmin(req, res, next) {
     next();
 }
 
-// ─── Socket.io ─────────────────────────────────────────────────────────────────
-const userSockets = new Map();
-
-io.on('connection', (socket) => {
-    socket.on('register', (userId) => {
-        if (!userSockets.has(userId)) userSockets.set(userId, new Set());
-        userSockets.get(userId).add(socket.id);
-    });
     socket.on('disconnect', () => {
         for (const [userId, sids] of userSockets.entries()) sids.delete(socket.id);
     });
 });
 
-function emitToUser(userId, event, data) {
-    const sids = userSockets.get(String(userId));
-    if (sids) sids.forEach(sid => io.to(sid).emit(event, data));
-}
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
@@ -194,8 +180,7 @@ app.post('/api/issues', requireAuth, async (req, res) => {
         issue.assigned_name = junior.name;
 
         // Real-time push to junior
-        emitToUser(junior.id, 'new_issue', issue);
-
+        
         // Discord Webhook
         await sendDiscordWebhook(`🚀 **New Issue Assigned!**\n**Title:** ${title}\n**Project:** ${project_name}\n**Priority:** ${priority}\n**Assigned To:** ${junior.name} by ${req.user.name}`);
 
@@ -225,8 +210,7 @@ app.post('/api/issues/:id/respond', requireAuth, async (req, res) => {
         const senior = seniorRes.rows[0];
 
         // Real-time push to senior
-        emitToUser(senior.id, 'issue_updated', { ...issue, updated_by: req.user.name });
-
+        
         // Discord Webhook
         await sendDiscordWebhook(`🔄 **Issue Status Update**\n**Issue:** ${issue.title}\n**New Status:** ${newStatus}\n**Updated By:** ${req.user.name}`, 0xf59e0b);
 
@@ -263,8 +247,7 @@ app.post('/api/issues/:id/update', requireAuth, async (req, res) => {
         const senior = seniorRes.rows[0];
 
         // Real-time push to senior
-        emitToUser(senior.id, 'issue_updated', { ...issue, updated_by: req.user.name });
-
+        
         // Discord Webhook
         await sendDiscordWebhook(`💬 **New Issue Update**\n**Issue:** ${issue.title}\n**Update:** ${update_text}\n**Status:** ${newStatus}\n**By:** ${req.user.name}`, 0x10b981);
 

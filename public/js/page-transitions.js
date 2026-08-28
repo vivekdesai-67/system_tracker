@@ -43,7 +43,7 @@ async function fetchAndTransition(url) {
         const newDocument = parser.parseFromString(text, 'text/html');
         
         // Start transition
-        document.startViewTransition(() => {
+        const transition = document.startViewTransition(() => {
             // Update the body content and title
             document.title = newDocument.title;
             
@@ -58,6 +58,13 @@ async function fetchAndTransition(url) {
             
             // Re-initialize scripts if needed
             if (window.initMagneticButtons) window.initMagneticButtons();
+        });
+        
+        transition.finished.catch(err => {
+            // Ignore aborts when users click links rapidly
+            if (err.name !== 'AbortError' && err.name !== 'InvalidStateError') {
+                console.warn('View transition error:', err);
+            }
         });
         
     } catch (err) {

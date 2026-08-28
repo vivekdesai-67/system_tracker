@@ -1,5 +1,4 @@
 <%- include('partials/head', { title: user.name + ' — SystemCall' }) %>
-<script src="/socket.io/socket.io.js"></script>
 
 <style>
 /* ── Layout ─────────────────────────────────────────── */
@@ -850,19 +849,6 @@ document.addEventListener('DOMContentLoaded', () => showToast('<%= toast %>'));
 <% } %>
 
 // ── Socket.io real-time ───────────────────────────────────────────────────────
-const socket = io();
-socket.emit('register', '<%= user.id %>');
-
-<% if (user.role === 'senior') { %>
-socket.on('issue_updated', (issue) => {
-    showToast(`${issue.updated_by} ${issue.status} issue #${issue.id}`, '#6366f1');
-    setTimeout(() => window.location.reload(), 1800);
-});
-<% } else { %>
-socket.on('new_issue', (issue) => {
-    showToast(`New assignment: "${issue.title}"`, '#f59e0b');
-    setTimeout(() => window.location.reload(), 1800);
-});
 <% } %>
 </script>
 
