@@ -885,6 +885,23 @@ document.addEventListener('DOMContentLoaded', function() {
             shouldSort: false
         });
     }
+    const jrEl = document.getElementById('assigned_to');
+    if (jrEl) {
+        new Choices(jrEl, {
+            searchEnabled: true,
+            searchPlaceholderValue: 'Search junior...',
+            itemSelectText: '',
+            shouldSort: false
+        });
+    }
+    const prioEl = document.getElementById('priority');
+    if (prioEl) {
+        new Choices(prioEl, {
+            searchEnabled: false,
+            itemSelectText: '',
+            shouldSort: false
+        });
+    }
 });
 </script>
 
