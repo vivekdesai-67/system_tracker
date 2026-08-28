@@ -4,10 +4,10 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const cookieParser = require('cookie-parser');
+const { clerkMiddleware, requireAuth, getAuth } = require('@clerk/express');
 
 const { pool, initDB } = require('./db');
 const { sendDiscordWebhook } = require('./discord');
-const { clerkMiddleware, syncClerkUser, requireClerkAuth, requireAdmin } = require('./clerk');
 
 const app = express();
 const server = http.createServer(app);
@@ -24,7 +24,70 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Clerk authentication middleware
-app.use(clerkMiddleware);
+app.use(clerkMiddleware());
+
+// Custom middleware to sync Clerk user with our database
+async function syncClerkUser(req, res, next) {
+    const auth = getAuth(req);
+    
+    if (!auth.userId) {
+        return next();
+    }
+
+    try {
+        // Check if user exists in our database
+        const result = await pool.query(
+            'SELECT * FROM users WHERE clerk_id = $1',
+            [auth.userId]
+        );
+
+        if (result.rows.length === 0) {
+            // Get user details from Clerk
+            const { clerkClient } = require('@clerk/express');
+            const clerkUser = await clerkClient.users.getUser(auth.userId);
+            
+            // Create user in our database
+            const insertResult = await pool.query(`
+                INSERT INTO users (
+                    name, 
+                    role, 
+                    username, 
+                    email, 
+                    clerk_id, 
+                    password_hash
+                ) VALUES ($1, $2, $3, $4, $5, $6)
+                ON CONFLICT (clerk_id) DO UPDATE 
+                SET email = EXCLUDED.email, name = EXCLUDED.name
+                RETURNING *
+            `, [
+                (clerkUser.firstName || '') + ' ' + (clerkUser.lastName || ''),
+                'junior', // Default role
+                clerkUser.username || clerkUser.emailAddresses[0]?.emailAddress,
+                clerkUser.emailAddresses[0]?.emailAddress,
+                auth.userId,
+                'clerk_managed'
+            ]);
+            
+            req.user = insertResult.rows[0];
+            console.log('[CLERK] Created new user:', req.user.email);
+        } else {
+            req.user = result.rows[0];
+        }
+        
+        next();
+    } catch (err) {
+        console.error('[CLERK] Error syncing user:', err);
+        next(err);
+    }
+}
+
+// Middleware to require admin role
+function requireAdmin(req, res, next) {
+    if (!req.user || req.user.role !== 'admin') {
+        return res.status(403).send('Forbidden: Admins only');
+    }
+    next();
+}
 
 // ─── Socket.io ─────────────────────────────────────────────────────────────────
 const userSockets = new Map();
@@ -47,7 +110,8 @@ function emitToUser(userId, event, data) {
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
 app.get('/', (req, res) => {
-    if (req.auth.userId) {
+    const auth = getAuth(req);
+    if (auth.userId) {
         return res.redirect('/dashboard');
     }
     res.redirect('/sign-in');
@@ -55,7 +119,8 @@ app.get('/', (req, res) => {
 
 // Clerk sign-in page
 app.get('/sign-in', (req, res) => {
-    if (req.auth.userId) {
+    const auth = getAuth(req);
+    if (auth.userId) {
         return res.redirect('/dashboard');
     }
     res.render('sign-in');
@@ -63,14 +128,15 @@ app.get('/sign-in', (req, res) => {
 
 // Clerk sign-up page
 app.get('/sign-up', (req, res) => {
-    if (req.auth.userId) {
+    const auth = getAuth(req);
+    if (auth.userId) {
         return res.redirect('/dashboard');
     }
     res.render('sign-up');
 });
 
 // GET /dashboard
-app.get('/dashboard', requireClerkAuth, syncClerkUser, async (req, res) => {
+app.get('/dashboard', requireAuth(), syncClerkUser, async (req, res) => {
     try {
         const userId = req.user.id;
         let issues;
@@ -117,7 +183,7 @@ app.get('/dashboard', requireClerkAuth, syncClerkUser, async (req, res) => {
 });
 
 // POST /api/issues — Senior creates an issue
-app.post('/api/issues', requireClerkAuth, syncClerkUser, async (req, res) => {
+app.post('/api/issues', requireAuth(), syncClerkUser, async (req, res) => {
     if (req.user.role !== 'senior') return res.status(403).send('Forbidden');
     const { project_name, client_name, title, description, priority, assigned_to } = req.body;
     try {
@@ -144,7 +210,7 @@ app.post('/api/issues', requireClerkAuth, syncClerkUser, async (req, res) => {
 });
 
 // POST /api/issues/:id/respond — Junior Accepts or Denies
-app.post('/api/issues/:id/respond', requireClerkAuth, syncClerkUser, async (req, res) => {
+app.post('/api/issues/:id/respond', requireAuth(), syncClerkUser, async (req, res) => {
     if (req.user.role !== 'junior') return res.status(403).send('Forbidden');
     const { action } = req.body;
     const newStatus = action === 'accept' ? 'Accepted' : 'Denied';
@@ -172,7 +238,7 @@ app.post('/api/issues/:id/respond', requireClerkAuth, syncClerkUser, async (req,
 });
 
 // POST /api/issues/:id/update — Junior posts update or marks resolved
-app.post('/api/issues/:id/update', requireClerkAuth, syncClerkUser, async (req, res) => {
+app.post('/api/issues/:id/update', requireAuth(), syncClerkUser, async (req, res) => {
     if (req.user.role !== 'junior') return res.status(403).send('Forbidden');
     const { update_text, mark_resolved } = req.body;
     const newStatus = mark_resolved === 'true' ? 'Resolved' : 'In Progress';
@@ -207,12 +273,12 @@ app.post('/api/issues/:id/update', requireClerkAuth, syncClerkUser, async (req, 
 });
 
 // GET /profile
-app.get('/profile', requireClerkAuth, syncClerkUser, (req, res) => {
+app.get('/profile', requireAuth(), syncClerkUser, (req, res) => {
     res.render('profile', { user: req.user, error: null, success: req.query.success || null });
 });
 
 // POST /api/profile
-app.post('/api/profile', requireClerkAuth, syncClerkUser, async (req, res) => {
+app.post('/api/profile', requireAuth(), syncClerkUser, async (req, res) => {
     const { name, phone_number } = req.body;
     try {
         await pool.query(
@@ -227,7 +293,7 @@ app.post('/api/profile', requireClerkAuth, syncClerkUser, async (req, res) => {
 });
 
 // GET /admin
-app.get('/admin', requireClerkAuth, syncClerkUser, requireAdmin, async (req, res) => {
+app.get('/admin', requireAuth(), syncClerkUser, requireAdmin, async (req, res) => {
     try {
         const usersRes = await pool.query('SELECT id, name, role, username, email, created_at FROM users ORDER BY created_at DESC');
         const issuesRes = await pool.query(`
@@ -245,7 +311,7 @@ app.get('/admin', requireClerkAuth, syncClerkUser, requireAdmin, async (req, res
 });
 
 // POST /api/admin/users/:id/update-role
-app.post('/api/admin/users/:id/update-role', requireClerkAuth, syncClerkUser, requireAdmin, async (req, res) => {
+app.post('/api/admin/users/:id/update-role', requireAuth(), syncClerkUser, requireAdmin, async (req, res) => {
     const { role } = req.body;
     try {
         await pool.query('UPDATE users SET role = $1 WHERE id = $2', [role, req.params.id]);

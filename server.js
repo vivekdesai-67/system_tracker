@@ -10,6 +10,8 @@ const { pool, initDB } = require('./db');
 const { sendDiscordWebhook } = require('./discord');
 
 const app = express();
+const { clerkMiddleware } = require("@clerk/express");
+app.use(clerkMiddleware());
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
