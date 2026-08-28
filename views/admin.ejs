@@ -305,8 +305,34 @@ function openAdminEditModal(id, name, username, role) {
     document.getElementById('adminEditForm').action = '/api/admin/users/' + id + '/edit';
     document.getElementById('admin_edit_name').value = unescape(name);
     document.getElementById('admin_edit_username').value = unescape(username);
-    document.getElementById('admin_edit_role').value = role;
+    if(window.adminRoleChoices) window.adminRoleChoices.setChoiceByValue(role);
 }
+</script>
+
+
+<!-- Choices.js Library & Custom Styling -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+<style>
+.choices { margin-bottom: 0; } 
+.choices__inner { background-color: var(--input-bg) !important; border: 1px solid var(--border-color) !important; border-radius: var(--radius-md) !important; min-height: 44px !important; display: flex !important; align-items: center !important; } 
+.choices.is-focused .choices__inner { border-color: var(--accent-primary) !important; box-shadow: 0 0 0 4px rgba(16,185,129,0.15) !important; }
+.choices__input { background-color: transparent !important; color: var(--text-primary) !important; } 
+.choices__input::placeholder { color: var(--text-muted) !important; }
+.choices__list--dropdown, .choices__list[aria-expanded] { background-color: var(--bg-secondary) !important; border: 1px solid var(--border-color) !important; border-radius: var(--radius-md) !important; color: var(--text-primary) !important; z-index: 1000 !important; } 
+.choices__list--dropdown .choices__item { color: var(--text-primary) !important; }
+.choices[data-type*="select-one"] .choices__button { filter: invert(1) opacity(0.5) !important; } 
+.choices__list--dropdown .choices__item--selectable.is-highlighted { background-color: var(--accent-primary) !important; color: white !important; }
+.choices__list--dropdown .choices__item--choice { border-bottom: 1px solid var(--border-subtle) !important; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const newRoleEl = document.getElementById('new_role');
+    if (newRoleEl) new Choices(newRoleEl, { searchEnabled: false, itemSelectText: '', shouldSort: false });
+    
+    const editRoleEl = document.getElementById('admin_edit_role');
+    if (editRoleEl) window.adminRoleChoices = new Choices(editRoleEl, { searchEnabled: false, itemSelectText: '', shouldSort: false });
+});
 </script>
 
 </body>
