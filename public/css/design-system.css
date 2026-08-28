@@ -286,3 +286,24 @@ body.is-loading .content {
     filter: grayscale(100%) blur(2px);
 }
 body.is-loading .shimmer-load::after { display: block; }
+
+
+/* Modal Styles */
+.modal-overlay {
+    display: none;
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    z-index: 9999; justify-content: center; align-items: center;
+}
+.modal-overlay.active {
+    display: flex;
+}
+.modal-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    width: 90%; max-width: 600px;
+    padding: 32px;
+    box-shadow: 0 24px 48px rgba(0,0,0,0.2);
+    animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
