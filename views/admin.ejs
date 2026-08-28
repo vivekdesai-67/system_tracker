@@ -138,7 +138,7 @@
                                     <td>
                                         <% if (u.id !== user.id) { %>
                                         <div style="display: flex; gap: 8px;">
-                                            <button type="button" class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;" onclick="openAdminEditModal(<%= u.id %>, '<%= escape(u.name.replace(/'/g, "\'")) %>', '<%= escape(u.username.replace(/'/g, "\'")) %>', '<%= u.role %>')">Edit</button>
+                                            <button type="button" class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;" onclick="openAdminEditModal(<%= u.id %>, '<%= escape(u.name.replace(/'/g, "\'")) %>', '<%= escape(u.username.replace(/'/g, "\'")) %>', '<%= u.role %>', '<%= u.discord_id || '' %>')">Edit</button>
                                             <form action="/api/admin/users/<%= u.id %>/delete" method="POST" style="margin: 0;" onsubmit="return confirm('Delete this user completely?');">
                                                 <button type="submit" class="btn-danger">Delete</button>
                                             </form>
@@ -180,7 +180,7 @@
                                     </td>
                                     <td>
                                         <div style="display: flex; gap: 8px;">
-                                            <button type="button" class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;" onclick="openAdminEditModal(<%= u.id %>, '<%= escape(u.name.replace(/'/g, "\'")) %>', '<%= escape(u.username.replace(/'/g, "\'")) %>', '<%= u.role %>')">Edit</button>
+                                            <button type="button" class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;" onclick="openAdminEditModal(<%= u.id %>, '<%= escape(u.name.replace(/'/g, "\'")) %>', '<%= escape(u.username.replace(/'/g, "\'")) %>', '<%= u.role %>', '<%= u.discord_id || '' %>')">Edit</button>
                                             <form action="/api/admin/users/<%= u.id %>/delete" method="POST" style="margin: 0;" onsubmit="return confirm('Delete this user completely?');">
                                                 <button type="submit" class="btn-danger">Delete</button>
                                             </form>

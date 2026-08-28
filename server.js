@@ -192,7 +192,8 @@ app.post('/api/issues', requireAuth, async (req, res) => {
         // Real-time push to junior
         
         // Discord Webhook
-        await sendDiscordWebhook(`🚀 **New Issue Assigned!**\n**Title:** ${title}\n**Project:** ${project_name}\n**Priority:** ${priority}\n**Assigned To:** ${junior.name} by ${req.user.name}`);
+        const mention = junior.discord_id ? `<@${junior.discord_id}>` : `**${junior.name}**`;
+        await sendDiscordWebhook(`🚀 **New Issue Assigned!**\n**Title:** ${title}\n**Project:** ${project_name}\n**Priority:** ${priority}\n**Assigned To:** ${mention} (by ${req.user.name})`);
 
         res.redirect(`/dashboard?toast=Issue assigned to ${junior.name} — Discord notification sent!`);
     } catch (err) {
@@ -342,8 +343,8 @@ app.post('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
 
 app.post('/api/admin/users/:id/edit', requireAuth, requireAdmin, async (req, res) => {
     try {
-        const { name, role } = req.body;
-        await pool.query('UPDATE users SET name = $1, role = $2 WHERE id = $3', [name, role, req.params.id]);
+        const { name, role, discord_id } = req.body;
+        await pool.query('UPDATE users SET name = $1, role = $2, discord_id = $3 WHERE id = $4', [name, role, discord_id || null, req.params.id]);
         res.redirect('/admin?toast=User updated successfully');
     } catch (err) {
         console.error(err);

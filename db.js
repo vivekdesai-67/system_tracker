@@ -33,6 +33,7 @@ async function initDB() {
                 phone_number VARCHAR(25) DEFAULT NULL,
                 email VARCHAR(255) UNIQUE,
                 clerk_id VARCHAR(255) UNIQUE,
+                discord_id VARCHAR(255) DEFAULT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
@@ -53,6 +54,7 @@ async function initDB() {
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
             
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS discord_id VARCHAR(255) DEFAULT NULL;
             CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
             CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
             CREATE INDEX IF NOT EXISTS idx_issues_created_by ON issues(created_by);
