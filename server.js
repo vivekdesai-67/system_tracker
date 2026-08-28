@@ -167,7 +167,7 @@ app.post('/api/issues', requireAuth, async (req, res) => {
         emitToUser(junior.id, 'new_issue', issue);
 
         // Discord Webhook
-        sendDiscordWebhook(`🚀 **New Issue Assigned!**\n**Title:** ${title}\n**Project:** ${project_name}\n**Client:** ${client_name}\n**Priority:** ${priority}\n**Assigned To:** ${junior.name} by ${req.user.name}`);
+        await sendDiscordWebhook(`🚀 **New Issue Assigned!**\n**Title:** ${title}\n**Project:** ${project_name}\n**Client:** ${client_name}\n**Priority:** ${priority}\n**Assigned To:** ${junior.name} by ${req.user.name}`);
 
         res.redirect(`/dashboard?toast=Issue assigned to ${junior.name} — Discord notification sent!`);
     } catch (err) {
@@ -198,7 +198,7 @@ app.post('/api/issues/:id/respond', requireAuth, async (req, res) => {
         emitToUser(senior.id, 'issue_updated', { ...issue, updated_by: req.user.name });
 
         // Discord Webhook
-        sendDiscordWebhook(`🔄 **Issue Status Update**\n**Issue:** ${issue.title}\n**New Status:** ${newStatus}\n**Updated By:** ${req.user.name}`, 0xf59e0b);
+        await sendDiscordWebhook(`🔄 **Issue Status Update**\n**Issue:** ${issue.title}\n**New Status:** ${newStatus}\n**Updated By:** ${req.user.name}`, 0xf59e0b);
 
         res.redirect('/dashboard');
     } catch (err) {
@@ -236,7 +236,7 @@ app.post('/api/issues/:id/update', requireAuth, async (req, res) => {
         emitToUser(senior.id, 'issue_updated', { ...issue, updated_by: req.user.name });
 
         // Discord Webhook
-        sendDiscordWebhook(`💬 **New Issue Update**\n**Issue:** ${issue.title}\n**Update:** ${update_text}\n**Status:** ${newStatus}\n**By:** ${req.user.name}`, 0x10b981);
+        await sendDiscordWebhook(`💬 **New Issue Update**\n**Issue:** ${issue.title}\n**Update:** ${update_text}\n**Status:** ${newStatus}\n**By:** ${req.user.name}`, 0x10b981);
 
         res.redirect('/dashboard');
     } catch (err) {
