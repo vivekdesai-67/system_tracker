@@ -147,6 +147,36 @@ app.get('/dashboard', requireAuth, async (req, res) => {
 });
 
 // POST /api/issues — Senior creates an issue
+
+// Delete Issue
+app.post('/api/issues/:id/delete', requireAuth, async (req, res) => {
+    if (req.user.role !== 'senior' && req.user.role !== 'admin') return res.status(403).send('Forbidden');
+    try {
+        await pool.query('DELETE FROM issues WHERE id = $1', [req.params.id]);
+        res.redirect('/dashboard');
+    } catch (err) {
+        console.error(err);
+        res.redirect('/dashboard?error=Failed to delete issue');
+    }
+});
+
+// Edit Issue
+app.post('/api/issues/:id/edit', requireAuth, async (req, res) => {
+    if (req.user.role !== 'senior' && req.user.role !== 'admin') return res.status(403).send('Forbidden');
+    const { project_name, title, priority, assigned_to } = req.body;
+    try {
+        await pool.query(`
+            UPDATE issues 
+            SET project_name = $1, title = $2, priority = $3, assigned_to = $4, updated_at = CURRENT_TIMESTAMP
+            WHERE id = $5
+        `, [project_name || 'General', title, priority, parseInt(assigned_to), req.params.id]);
+        res.redirect('/dashboard');
+    } catch (err) {
+        console.error(err);
+        res.redirect('/dashboard?error=Failed to edit issue');
+    }
+});
+
 app.post('/api/issues', requireAuth, async (req, res) => {
     if (req.user.role !== 'senior') return res.status(403).send('Forbidden');
     const { project_name, client_name, title, description, priority, assigned_to } = req.body;

@@ -622,6 +622,12 @@
                                         <div class="update-meta"><%= new Date(issue.updates[issue.updates.length-1].timestamp).toLocaleString('en-IN') %></div>
                                     </div>
                                 <% } %>
+                                <div style="display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end;" onclick="event.stopPropagation()">
+                                    <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;" onclick="openEditModal(<%= issue.id %>, '<%= escape(issue.title.replace(/'/g, "\'")) %>', '<%= escape(issue.project_name.replace(/'/g, "\'")) %>', <%= issue.assigned_to %>, '<%= issue.priority %>')">Update</button>
+                                    <form action="/api/issues/<%= issue.id %>/delete" method="POST" style="margin:0;" onsubmit="return confirm('Are you sure you want to delete this issue?');">
+                                        <button type="submit" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; color: #ef4444; border-color: rgba(239,68,68,0.3);">Delete</button>
+                                    </form>
+                                </div>
                             </div>
                         </div>
                     <% }); %>
@@ -894,6 +900,15 @@ document.addEventListener('DOMContentLoaded', function() {
             shouldSort: false
         });
     }
+    
+    const editProj = document.getElementById('edit_project_name');
+    if (editProj) {
+        window.editProjChoices = new Choices(editProj, { searchEnabled: true, itemSelectText: '', shouldSort: false });
+    }
+    const editJr = document.getElementById('edit_assigned_to');
+    if (editJr) {
+        window.editJrChoices = new Choices(editJr, { searchEnabled: true, itemSelectText: '', shouldSort: false });
+    }
     const prioEl = document.getElementById('priority');
     if (prioEl) {
         new Choices(prioEl, {
@@ -928,6 +943,121 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
+</script>
+
+
+<!-- Edit Issue Modal -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+            <h2 style="font-size: var(--text-lg); font-weight: 600;">Edit Issue <span id="edit-issue-id"></span></h2>
+            <button class="icon-btn" onclick="document.getElementById('editModal').classList.remove('active')" type="button">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+        <form id="editForm" method="POST">
+            <div class="form-group">
+                <label for="edit_title">Issue Title</label>
+                <input id="edit_title" name="title" type="text" class="form-input" required autocomplete="off">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="edit_project_name">Project Name</label>
+                    <select id="edit_project_name" name="project_name" class="form-input" required>
+                        <option value="ATMO-1">ATMO-1</option>
+                        <option value="ATMO-2">ATMO-2</option>
+                        <option value="Crossweld-1">Crossweld-1</option>
+                        <option value="Crossweld-2">Crossweld-2</option>
+                        <option value="Vial Counting">Vial Counting</option>
+                        <option value="Knul Detection">Knul Detection</option>
+                        <option value="Wheel Variant">Wheel Variant</option>
+                        <option value="PDI - Pune">PDI - Pune</option>
+                        <option value="W- Sealant">W- Sealant</option>
+                        <option value="Cable Inspection">Cable Inspection</option>
+                        <option value="POS -HYUNDAI">POS -HYUNDAI</option>
+                        <option value="Molex-Pin">Molex-Pin</option>
+                        <option value="Cam-cap">Cam-cap</option>
+                        <option value="Mb-cap">Mb-cap</option>
+                        <option value="Engine Sealant">Engine Sealant</option>
+                        <option value="JK fenner">JK fenner</option>
+                        <option value="TVS Lucas">TVS Lucas</option>
+                        <option value="Kia">Kia</option>
+                        <option value="Dot Sealant">Dot Sealant</option>
+                        <option value="TKAP Thermister">TKAP Thermister</option>
+                        <option value="P2-VIN">P2-VIN</option>
+                        <option value="P2-Roboline">P2-Roboline</option>
+                        <option value="KeyOCR">KeyOCR</option>
+                        <option value="Wireless OCR">Wireless OCR</option>
+                        <option value="CMPV - VIN">CMPV - VIN</option>
+                        <option value="Tag- OCR">Tag- OCR</option>
+                        <option value="PDIR">PDIR</option>
+                        <option value="Lifestyle">Lifestyle</option>
+                        <option value="Cable-OCR">Cable-OCR</option>
+                        <option value="Tyre-Inspection">Tyre-Inspection</option>
+                        <option value="Channai- Weld bead">Channai- Weld bead</option>
+                        <option value="Bawal- Weld bead">Bawal- Weld bead</option>
+                        <option value="Vanod- Weld bead">Vanod- Weld bead</option>
+                        <option value="Sonacomster- Human Detection">Sonacomster- Human Detection</option>
+                        <option value="Tata- Human Detection">Tata- Human Detection</option>
+                        <option value="Valve hole Dia">Valve hole Dia</option>
+                        <option value="Powder coating">Powder coating</option>
+                        <option value="Power Train 1">Power Train 1</option>
+                        <option value="Power Train 2">Power Train 2</option>
+                        <option value="Suzuki VIN">Suzuki VIN</option>
+                        <option value="Hero Motorcrop">Hero Motorcrop</option>
+                        <option value="AGI heightmeasurement">AGI heightmeasurement</option>
+                        <option value="AGI Chockbore">AGI Chockbore</option>
+                        <option value="AGI Colour inspection">AGI Colour inspection</option>
+                        <option value="JK Paper- wood interptment">JK Paper- wood interptment</option>
+                        <option value="Valve lock Inspection-igatpuri">Valve lock Inspection-igatpuri</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="edit_assigned_to">Assign to Junior</label>
+                    <select id="edit_assigned_to" name="assigned_to" class="form-input" required>
+                        <% juniors.forEach(j => { %>
+                            <option value="<%= j.id %>"><%= j.name %></option>
+                        <% }); %>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom: 32px;">
+                <label>Priority</label>
+                <div class="priority-selector">
+                    <button type="button" class="priority-btn p-low" onclick="setEditPriority('Low', this)">Low</button>
+                    <button type="button" class="priority-btn p-medium" onclick="setEditPriority('Medium', this)">Medium</button>
+                    <button type="button" class="priority-btn p-high" onclick="setEditPriority('High', this)">High</button>
+                </div>
+                <input type="hidden" name="priority" id="edit-priority-input" value="Medium">
+            </div>
+            <div style="display: flex; justify-content: flex-end;">
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openEditModal(id, title, project, assigned, priority) {
+    document.getElementById('editModal').classList.add('active');
+    document.getElementById('editForm').action = '/api/issues/' + id + '/edit';
+    document.getElementById('edit-issue-id').innerText = '#' + id;
+    document.getElementById('edit_title').value = title;
+    
+    if(window.editProjChoices) window.editProjChoices.setChoiceByValue(project);
+    if(window.editJrChoices) window.editJrChoices.setChoiceByValue(assigned.toString());
+    
+    // Set priority
+    document.querySelectorAll('#editForm .priority-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('edit-priority-input').value = priority;
+    const btn = document.querySelector('#editForm .priority-btn.p-' + priority.toLowerCase());
+    if(btn) btn.classList.add('active');
+}
+function setEditPriority(level, btn) {
+    document.querySelectorAll('#editForm .priority-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('edit-priority-input').value = level;
+}
 </script>
 
 <%- include('partials/scripts') %>
