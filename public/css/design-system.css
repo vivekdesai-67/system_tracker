@@ -253,13 +253,14 @@ input, select, textarea, button { font-family: inherit; }
     100% { background-position: 0% 0%; }
 }
 .mesh-bg {
-    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -999;
+    min-height: 100vh;
     background: 
         radial-gradient(circle at 15% 50%, rgba(16,185,129,0.05), transparent 50%),
         radial-gradient(circle at 85% 30%, rgba(59,130,246,0.05), transparent 50%),
         radial-gradient(circle at 50% 80%, rgba(139,92,246,0.05), transparent 50%),
         var(--bg-primary);
     background-size: 150% 150%;
+    background-attachment: fixed;
     animation: meshShift 25s ease-in-out infinite alternate;
 }
 
