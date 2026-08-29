@@ -56,22 +56,37 @@
         type="text/javascript"
     ></script>
 
+    
     <script>
         window.addEventListener('load', async () => {
-            await Clerk.load();
+            console.log("Publishable Key passed to frontend:", "<%= publishableKey %>");
             
-            const signUpDiv = document.getElementById('clerk-sign-up');
-            
-            Clerk.mountSignUp(signUpDiv, {
-                afterSignUpUrl: '/dashboard',
-                signInUrl: '/sign-in',
-                appearance: {
-                    elements: {
-                        rootBox: 'w-full',
-                        card: 'shadow-lg'
+            if (!"<%= publishableKey %>" || "<%= publishableKey %>" === "undefined") {
+                document.getElementById('clerk-sign-in').innerHTML = '<div style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); padding: 20px; border-radius: 12px; color: #ef4444; text-align: center;"><strong>Configuration Error:</strong><br>The Clerk Publishable Key is missing. Please make sure NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is set in Vercel.</div>';
+                return;
+            }
+
+            const checkClerk = setInterval(async () => {
+                if (window.Clerk) {
+                    clearInterval(checkClerk);
+                    try {
+                        await Clerk.load();
+                        const container = document.getElementById('clerk-sign-in');
+                        Clerk.mountSignUp(container, { afterSignUpUrl: '/dashboard', signInUrl: '/sign-in', appearance: { elements: { rootBox: 'w-full' } } });
+                    } catch (err) {
+                        console.error("Clerk mount error:", err);
+                        document.getElementById('clerk-sign-in').innerHTML = '<div style="color: red; text-align: center;">Failed to load Clerk UI. Check console.</div>';
                     }
                 }
-            });
+            }, 50);
+            
+            // Timeout after 5 seconds
+            setTimeout(() => {
+                if (!window.Clerk) {
+                    clearInterval(checkClerk);
+                    document.getElementById('clerk-sign-in').innerHTML = '<div style="color: red; text-align: center;">Network Error: Clerk JS failed to download.</div>';
+                }
+            }, 5000);
         });
     </script>
 </body>
