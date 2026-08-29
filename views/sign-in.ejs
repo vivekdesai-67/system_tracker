@@ -51,8 +51,8 @@
     <script
         async
         crossorigin="anonymous"
-        data-clerk-publishable-key="<%= process.env.CLERK_PUBLISHABLE_KEY %>"
-        src="https://<%= process.env.CLERK_PUBLISHABLE_KEY.split('_')[1] %>.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+        data-clerk-publishable-key="<%= publishableKey %>"
+        src="https://<%= publishableKey.split('_')[1] %>.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
         type="text/javascript"
     ></script>
 

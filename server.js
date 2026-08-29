@@ -123,7 +123,7 @@ app.get('/sign-in', (req, res) => {
     if (auth.userId) {
         return res.redirect('/dashboard');
     }
-    res.render('sign-in');
+    res.render('sign-in', { publishableKey: process.env.CLERK_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY });
 });
 
 // Redirect old /login to /sign-in for backward compatibility
@@ -137,7 +137,7 @@ app.get('/sign-up', (req, res) => {
     if (auth.userId) {
         return res.redirect('/dashboard');
     }
-    res.render('sign-up');
+    res.render('sign-up', { publishableKey: process.env.CLERK_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY });
 });
 
 // GET /dashboard
