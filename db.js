@@ -73,6 +73,7 @@ async function initDB() {
             { name: 'Pavan',       role: 'senior', username: 'pavan' },
             { name: 'Mani',        role: 'senior', username: 'mani' },
             { name: 'Lakshman',    role: 'senior', username: 'lakshman' },
+            { name: 'Bharat',      role: 'senior', username: 'bharat' },
             // Juniors
             { name: 'Vivek',       role: 'junior', username: 'vivek' },
             { name: 'Manikhandan', role: 'junior', username: 'manikhandan' },
@@ -81,7 +82,9 @@ async function initDB() {
             { name: 'Santosh',     role: 'junior', username: 'santosh' },
             { name: 'Chandan',     role: 'junior', username: 'chandan' },
             { name: 'Kushal',      role: 'junior', username: 'kushal' },
-            { name: 'Sreya',       role: 'junior', username: 'sreya' }
+            { name: 'Sreya',       role: 'junior', username: 'sreya' },
+            { name: 'Nisarga',     role: 'junior', username: 'nisarga' },
+            { name: 'Suya',        role: 'junior', username: 'suya' }
         ];
 
         for (const u of USERS) {
