@@ -58,7 +58,7 @@
 
     
     <script>
-        window.addEventListener('load', async () => {
+        (async () => {
             console.log("Publishable Key passed to frontend:", "<%= publishableKey %>");
             
             if (!"<%= publishableKey %>" || "<%= publishableKey %>" === "undefined") {
@@ -87,7 +87,7 @@
                     document.getElementById('clerk-sign-in').innerHTML = '<div style="color: red; text-align: center;">Network Error: Clerk JS failed to download.</div>';
                 }
             }, 5000);
-        });
+        })();
     </script>
 </body>
 </html>
