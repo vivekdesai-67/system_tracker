@@ -126,6 +126,11 @@ app.get('/sign-in', (req, res) => {
     res.render('sign-in');
 });
 
+// Redirect old /login to /sign-in for backward compatibility
+app.get('/login', (req, res) => {
+    res.redirect('/sign-in');
+});
+
 // Clerk sign-up page
 app.get('/sign-up', (req, res) => {
     const auth = getAuth(req);
