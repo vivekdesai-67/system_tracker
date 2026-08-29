@@ -1,6 +1,6 @@
 
 async function sendDiscordWebhook(message, color = 0x3b82f6) {
-    const webhookUrl = process.env.DISCORD_WEBHOOK_URL || 'https://discord.com/api/webhooks/1542410900063911979/ql3S60QMGXkH_jBI7Cihi4DIIrAxi4QiWlY4o3YtkJxWoPMYgnYAUlWboXsy-1XULskK';
+    const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
     if (!webhookUrl) {
         console.warn("DISCORD_WEBHOOK_URL is not set. Skipping notification.");
         return;
