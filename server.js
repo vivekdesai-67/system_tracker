@@ -171,6 +171,7 @@ app.get('/dashboard', requireAuth(), syncClerkUser, async (req, res) => {
         }
 
         const juniorsResult = await pool.query("SELECT id, name FROM users WHERE role = 'junior' ORDER BY name");
+        const seniorsResult = await pool.query("SELECT id, name FROM users WHERE role = 'senior' ORDER BY name");
         
         const duration = Date.now() - startTime;
         console.log(`[DASHBOARD] Loaded in ${duration}ms for ${req.user.username}`);
@@ -178,7 +179,7 @@ app.get('/dashboard', requireAuth(), syncClerkUser, async (req, res) => {
         res.render('dashboard', { 
             user: req.user, 
             issues, 
-            juniors: juniorsResult.rows, 
+            juniors: juniorsResult.rows, seniors: seniorsResult.rows, 
             toast: req.query.toast || null 
         });
     } catch (err) {
@@ -245,7 +246,7 @@ app.post('/api/issues/:id/respond', requireAuth(), syncClerkUser, async (req, re
 // POST /api/issues/:id/update — Junior posts update or marks resolved
 app.post('/api/issues/:id/update', requireAuth(), syncClerkUser, async (req, res) => {
     if (req.user.role !== 'junior') return res.status(403).send('Forbidden');
-    const { update_text, mark_resolved } = req.body;
+    const { update_text, mark_resolved, notify_senior_id } = req.body;
     const newStatus = mark_resolved === 'true' ? 'Resolved' : 'In Progress';
     const issueId = parseInt(req.params.id);
     try {
@@ -264,13 +265,20 @@ app.post('/api/issues/:id/update', requireAuth(), syncClerkUser, async (req, res
         if (result.rows.length === 0) return res.redirect('/dashboard');
         const issue = result.rows[0];
 
-        const seniorRes = await pool.query('SELECT * FROM users WHERE id = $1::int', [issue.created_by]);
-        const senior = seniorRes.rows[0];
+        // Notify specific senior if marked resolved
+        if (mark_resolved === 'true' && notify_senior_id) {
+            const selectedSeniorRes = await pool.query('SELECT * FROM users WHERE id = $1', [notify_senior_id]);
+            if (selectedSeniorRes.rows.length > 0) {
+                const selectedSenior = selectedSeniorRes.rows[0];
+                const pingContent = selectedSenior.discord_id ? `<@${selectedSenior.discord_id}>` : null;
+                await sendDiscordWebhook(`✅ **Issue Resolved (Verification Required)**\n**Title:** ${issue.title}\n**Project:** ${issue.project_name}\n**Resolved By:** ${req.user.name}\n**Verify Please:** ${selectedSenior.name}\n**Note:** ${update_text}`, 0x10b981, pingContent);
+            }
+        } else {
+            // General update notification
+            await sendDiscordWebhook(`💬 **New Issue Update**\n**Issue:** ${issue.title}\n**Update:** ${update_text}\n**Status:** ${newStatus}\n**By:** ${req.user.name}`, 0x10b981);
+        }
 
-        emitToUser(senior.id, 'issue_updated', { ...issue, updated_by: req.user.name });
-        sendDiscordWebhook(`💬 **New Issue Update**\n**Issue:** ${issue.title}\n**Update:** ${update_text}\n**Status:** ${newStatus}\n**By:** ${req.user.name}`, 0x10b981);
-
-        res.redirect('/dashboard');
+        res.redirect('/dashboard?toast=' + encodeURIComponent('Update saved!' + (mark_resolved === 'true' ? ' Senior notified.' : '')));
     } catch (err) {
         console.error(err);
         res.status(500).send('Server error posting update.');

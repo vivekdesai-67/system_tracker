@@ -717,10 +717,21 @@
                                     <label for="note-<%= issue.id %>">Update Note</label>
                                     <textarea id="note-<%= issue.id %>" name="update_text" class="form-input" rows="3" placeholder="Describe what you've done or found…" required style="resize: vertical;"></textarea>
                                 </div>
+                                
                                 <div class="resolve-toggle">
-                                    <label><input type="radio" name="mark_resolved" value="false" checked> Still In Progress</label>
-                                    <label style="color: var(--accent-success);"><input type="radio" name="mark_resolved" value="true"> ✓ Mark as Resolved</label>
+                                    <label><input type="radio" name="mark_resolved" value="false" checked onchange="document.getElementById('senior-dropdown-<%= issue.id %>').style.display='none';"> Still In Progress</label>
+                                    <label style="color: var(--accent-success);"><input type="radio" name="mark_resolved" value="true" onchange="document.getElementById('senior-dropdown-<%= issue.id %>').style.display='block';"> ✓ Mark as Resolved</label>
                                 </div>
+                                <div id="senior-dropdown-<%= issue.id %>" style="display: none; margin-bottom: 1rem;">
+                                    <label for="notify_senior_id" class="form-label">Verify with Senior (Sends Discord Ping)</label>
+                                    <select name="notify_senior_id" class="form-input" style="appearance: auto;">
+                                        <option value="" disabled selected>Select a senior to notify...</option>
+                                        <% seniors.forEach(s => { %>
+                                            <option value="<%= s.id %>"><%= s.name %></option>
+                                        <% }); %>
+                                    </select>
+                                </div>
+
                                 <div style="display: flex; justify-content: flex-end;">
                                     <button type="submit" class="btn btn-primary" data-magnetic>
                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
