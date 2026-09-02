@@ -702,7 +702,7 @@
             <% } %>
             <% active.forEach(issue => { %>
                 <div class="active-task">
-                    <div class="task-trigger s-progress" id="trigger-<%= issue.id %>">
+                    <div class="task-trigger s-progress" id="trigger-<%= issue.id %>" onclick="toggleDrawer('<%= issue.id %>')">
                         <div style="flex: 1;">
                             <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">#<%= issue.id %> · <%= issue.project_name %> · by <%= issue.created_name %></div>
                             <div style="font-weight: 600; font-size: var(--text-base);"><%= issue.title %></div>
