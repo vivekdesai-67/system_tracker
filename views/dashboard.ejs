@@ -719,8 +719,8 @@
                                 </div>
                                 
                                 <div class="resolve-toggle">
-                                    <label><input type="radio" name="mark_resolved" value="false" checked onchange="document.getElementById('senior-dropdown-<%= issue.id %>').style.display='none';"> Still In Progress</label>
-                                    <label style="color: var(--accent-success);"><input type="radio" name="mark_resolved" value="true" onchange="document.getElementById('senior-dropdown-<%= issue.id %>').style.display='block';"> ✓ Mark as Resolved</label>
+                                    <label><input type="radio" name="mark_resolved" value="false" checked onclick="document.getElementById('senior-dropdown-<%= issue.id %>').style.display='none';"> Still In Progress</label>
+                                    <label style="color: var(--accent-success);"><input type="radio" name="mark_resolved" value="true" onclick="document.getElementById('senior-dropdown-<%= issue.id %>').style.display='block';"> ✓ Mark as Resolved</label>
                                 </div>
                                 <div id="senior-dropdown-<%= issue.id %>" style="display: none; margin-bottom: 1rem;">
                                     <label for="notify_senior_id" class="form-label">Verify with Senior (Sends Discord Ping)</label>
