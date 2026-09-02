@@ -6,10 +6,22 @@ const { Server } = require('socket.io');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 
+
 // Auto-map Vercel's NEXT_PUBLIC key to the standard Clerk key if missing
 if (!process.env.CLERK_PUBLISHABLE_KEY && process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
     process.env.CLERK_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 }
+
+// TEMPORARY: Inject dummy keys if missing so Vercel doesn't crash while user creates a new Clerk app
+if (!process.env.CLERK_SECRET_KEY) {
+    process.env.CLERK_SECRET_KEY = 'sk_test_dummykeyforcrashevasion1234567890';
+    console.warn('⚠️ Injecting dummy CLERK_SECRET_KEY to prevent crash');
+}
+if (!process.env.CLERK_PUBLISHABLE_KEY) {
+    process.env.CLERK_PUBLISHABLE_KEY = 'pk_test_ZHVtbXkta2V5LWZvci1jcmFzaC1ldmFzaW9uJD';
+    console.warn('⚠️ Injecting dummy CLERK_PUBLISHABLE_KEY to prevent crash');
+}
+
 
 const { clerkMiddleware, requireAuth, getAuth } = require('@clerk/express');
 
