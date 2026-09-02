@@ -366,12 +366,16 @@ app.get('/api/health', async (req, res) => {
             database: 'connected',
             users: dbCheck.rows[0].count,
             clerk_publishable_key: process.env.CLERK_PUBLISHABLE_KEY ? 'set' : 'missing',
-            clerk_secret_key: process.env.CLERK_SECRET_KEY ? 'set' : 'missing'
+            clerk_secret_key: process.env.CLERK_SECRET_KEY ? 'set' : 'missing',
+            next_public_key: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? 'set' : 'missing',
+            vercel: process.env.VERCEL ? 'yes' : 'no'
         });
     } catch (err) {
         res.status(500).json({
             status: 'error',
-            message: err.message
+            message: err.message,
+            clerk_publishable_key: process.env.CLERK_PUBLISHABLE_KEY ? 'set' : 'missing',
+            clerk_secret_key: process.env.CLERK_SECRET_KEY ? 'set' : 'missing'
         });
     }
 });
