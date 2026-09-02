@@ -406,6 +406,20 @@ async function ensureDB() {
     await dbInitPromise;
 }
 
+
+// Custom global error handler to show exactly what's breaking on Vercel
+app.use((err, req, res, next) => {
+    console.error('🔥 FATAL EXPRESS ERROR:', err);
+    res.status(500).send(`
+        <div style="font-family: monospace; padding: 40px; background: #ffebee; color: #b71c1c; border: 2px solid #ef5350; border-radius: 8px; margin: 40px auto; max-width: 800px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h2 style="margin-top: 0;">Internal Server Error</h2>
+            <p>Your server crashed because of the following error:</p>
+            <pre style="background: #fff; padding: 20px; border-radius: 4px; overflow-x: auto;">${err.message}</pre>
+            <p><strong>Diagnosis:</strong> This usually means you forgot to add your Environment Variables (like DATABASE_URL or CLERK_SECRET_KEY) in the Vercel dashboard!</p>
+        </div>
+    `);
+});
+
 if (process.env.VERCEL) {
     ensureDB().catch(err => {
         console.error('Failed to initialize database:', err);
