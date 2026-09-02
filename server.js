@@ -5,6 +5,12 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const cookieParser = require('cookie-parser');
+
+// Auto-map Vercel's NEXT_PUBLIC key to the standard Clerk key if missing
+if (!process.env.CLERK_PUBLISHABLE_KEY && process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
+    process.env.CLERK_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+}
+
 const { clerkMiddleware, requireAuth, getAuth } = require('@clerk/express');
 
 const { pool, initDB } = require('./db');
