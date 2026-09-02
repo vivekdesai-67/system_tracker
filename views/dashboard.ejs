@@ -859,6 +859,25 @@ function showToast(msg, color) {
 document.addEventListener('DOMContentLoaded', () => showToast('<%= toast %>'));
 <% } %>
 
+// ── Toggle senior dropdown when "Mark as Resolved" is selected ─────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('input[name="mark_resolved"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const issueId = this.closest('form').querySelector('[name="update_text"]').id.replace('note-', '');
+            const dropdown = document.getElementById(`senior-dropdown-${issueId}`);
+            const selectEl = dropdown.querySelector('select');
+            
+            if (this.value === 'true') {
+                dropdown.style.display = 'block';
+                selectEl.required = true;
+            } else {
+                dropdown.style.display = 'none';
+                selectEl.required = false;
+            }
+        });
+    });
+});
+
 
 </script>
 
