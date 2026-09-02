@@ -307,3 +307,12 @@ body.is-loading .shimmer-load::after { display: block; }
     box-shadow: 0 24px 48px rgba(0,0,0,0.2);
     animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+
+select, select.form-input, .form-input, body, html {
+    color-scheme: dark !important;
+}
+option {
+    background-color: #1e1e1e !important;
+    color: #fff !important;
+}
