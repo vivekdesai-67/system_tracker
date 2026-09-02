@@ -1,15 +1,5 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "server.js",
-      "use": "@vercel/node",
-      "config": {
-        "maxLambdaSize": "50mb",
-        "includeFiles": ["views/**", "public/**"]
-      }
-    }
-  ],
   "routes": [
     {
       "src": "/public/(.*)",
@@ -26,7 +16,8 @@
   "functions": {
     "server.js": {
       "memory": 1024,
-      "maxDuration": 10
+      "maxDuration": 10,
+      "includeFiles": "views/**"
     }
   },
   "buildCommand": "npm install @clerk/express && echo 'Build with Clerk'"
