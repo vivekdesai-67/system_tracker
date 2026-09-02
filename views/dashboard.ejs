@@ -568,9 +568,9 @@
                 <div class="form-group">
                     <label>Priority</label>
                     <div class="priority-group" id="priority-group">
-                        <button type="button" class="priority-btn active-low" data-val="Low" onclick="setPriority('Low')">🟢 Low</button>
-                        <button type="button" class="priority-btn" data-val="Medium" onclick="setPriority('Medium')">🟡 Medium</button>
-                        <button type="button" class="priority-btn" data-val="High" onclick="setPriority('High')">🔴 High</button>
+                        <button type="button" class="priority-btn active-low" data-val="Low">🟢 Low</button>
+                        <button type="button" class="priority-btn" data-val="Medium">🟡 Medium</button>
+                        <button type="button" class="priority-btn" data-val="High">🔴 High</button>
                     </div>
                     <input type="hidden" name="priority" id="priority-input" value="Low">
                 </div>
@@ -607,7 +607,7 @@
                     </div>
                     <div id="col-<%= col.key.replace(/ /g,'_') %>">
                     <% issues.filter(i => i.status === col.key).forEach(issue => { %>
-                        <div class="issue-card <%= col.css %>" id="issue-<%= issue.id %>" onclick="this.classList.toggle('expanded')">
+                        <div class="issue-card <%= col.css %>" id="issue-<%= issue.id %>">
                             <div class="issue-id">#<%= issue.id %> · <%= issue.project_name %><% if(issue.client_name){ %> · <span style="color:var(--accent-secondary)"><%= issue.client_name %></span><% } %></div>
                             <div class="issue-title" style="margin-bottom: 0;"><%= issue.title %></div>
                             <div class="issue-details">
@@ -616,8 +616,8 @@
                                         <span class="priority-chip p-<%= issue.priority.toLowerCase() %>"><%= issue.priority %></span>
                                         <span class="assignee-chip">👤 <%= issue.assigned_name %></span>
                                     </div>
-                                    <div style="display: flex; gap: 8px;" onclick="event.stopPropagation()">
-                                        <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;" onclick="openEditModal(<%= issue.id %>, '<%= escape(issue.title.replace(/'/g, "\'")) %>', '<%= escape(issue.project_name.replace(/'/g, "\'")) %>', <%= issue.assigned_to %>, '<%= issue.priority %>')">Update</button>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;"\'")) %>', '<%= escape(issue.project_name.replace(/'/g, "\'")) %>', <%= issue.assigned_to %>, '<%= issue.priority %>')">Update</button>
                                         <form action="/api/issues/<%= issue.id %>/delete" method="POST" style="margin:0;" onsubmit="return confirm('Are you sure you want to delete this issue?');">
                                             <button type="submit" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; color: #ef4444; border-color: rgba(239,68,68,0.3);">Delete</button>
                                         </form>
@@ -662,7 +662,7 @@
                 <div class="empty glass" style="padding: 32px;">No pending assignments 🎉</div>
             <% } %>
             <% pending.forEach(issue => { %>
-                <div class="inbox-card s-pending" id="inbox-<%= issue.id %>" onclick="this.classList.toggle('expanded')">
+                <div class="inbox-card s-pending" id="inbox-<%= issue.id %>">
                     <div style="flex: 1; min-width: 0;">
                         <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">#<%= issue.id %> · <%= issue.project_name %><% if(issue.client_name){ %> · <span style="color:var(--accent-secondary)"><%= issue.client_name %></span><% } %> · Assigned by <strong><%= issue.created_name %></strong></div>
                         <div style="font-weight: 600; font-size: var(--text-base); margin-bottom: 6px;"><%= issue.title %></div>
@@ -702,7 +702,7 @@
             <% } %>
             <% active.forEach(issue => { %>
                 <div class="active-task">
-                    <div class="task-trigger s-progress" onclick="toggleDrawer(<%= issue.id %>)" id="trigger-<%= issue.id %>">
+                    <div class="task-trigger s-progress" id="trigger-<%= issue.id %>">
                         <div style="flex: 1;">
                             <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">#<%= issue.id %> · <%= issue.project_name %> · by <%= issue.created_name %></div>
                             <div style="font-weight: 600; font-size: var(--text-base);"><%= issue.title %></div>
@@ -719,8 +719,8 @@
                                 </div>
                                 
                                 <div class="resolve-toggle">
-                                    <label><input type="radio" name="mark_resolved" value="false" checked onclick="document.getElementById('senior-dropdown-<%= issue.id %>').style.display='none';"> Still In Progress</label>
-                                    <label style="color: var(--accent-success);"><input type="radio" name="mark_resolved" value="true" onclick="document.getElementById('senior-dropdown-<%= issue.id %>').style.display='block';"> ✓ Mark as Resolved</label>
+                                    <label><input type="radio" name="mark_resolved" value="false" checked> Still In Progress</label>
+                                    <label style="color: var(--accent-success);"><input type="radio" name="mark_resolved" value="true"> ✓ Mark as Resolved</label>
                                 </div>
                                 <div id="senior-dropdown-<%= issue.id %>" style="display: none; margin-bottom: 1rem;">
                                     <label for="notify_senior_id" class="form-label">Verify with Senior (Sends Discord Ping)</label>
@@ -949,7 +949,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="modal-card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
             <h2 style="font-size: var(--text-lg); font-weight: 600;">Edit Issue <span id="edit-issue-id"></span></h2>
-            <button class="icon-btn" onclick="document.getElementById('editModal').classList.remove('active')" type="button">
+            <button class="icon-btn" type="button">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
         </div>
@@ -1022,9 +1022,9 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="form-group" style="margin-bottom: 32px;">
                 <label>Priority</label>
                 <div class="priority-selector">
-                    <button type="button" class="priority-btn p-low" onclick="setEditPriority('Low', this)">Low</button>
-                    <button type="button" class="priority-btn p-medium" onclick="setEditPriority('Medium', this)">Medium</button>
-                    <button type="button" class="priority-btn p-high" onclick="setEditPriority('High', this)">High</button>
+                    <button type="button" class="priority-btn p-low">Low</button>
+                    <button type="button" class="priority-btn p-medium">Medium</button>
+                    <button type="button" class="priority-btn p-high">High</button>
                 </div>
                 <input type="hidden" name="priority" id="edit-priority-input" value="Medium">
             </div>
