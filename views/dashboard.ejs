@@ -324,6 +324,29 @@
     .priority-group { flex-direction: row; }
     .priority-btn { padding: 8px 4px; font-size: 13px; }
 }
+
+/* Custom Premium Dropdown */
+.custom-dropdown { position: relative; width: 100%; font-family: var(--font-sans); }
+.custom-dropdown-selected {
+    padding: 12px 16px; border-radius: var(--radius-md); border: 1px solid var(--border-color);
+    background: var(--input-bg); color: var(--text-primary); cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center; transition: all 0.2s;
+}
+.custom-dropdown-selected:hover { border-color: var(--accent-primary); }
+.custom-dropdown-options {
+    position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px;
+    background: #1e293b; border: 1px solid var(--border-color); border-radius: var(--radius-md);
+    max-height: 200px; overflow-y: auto; z-index: 100; display: none;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+}
+.custom-dropdown.active .custom-dropdown-options { display: block; }
+.custom-dropdown-options::-webkit-scrollbar { width: 6px; }
+.custom-dropdown-options::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+.custom-option {
+    padding: 10px 16px; cursor: pointer; color: #f8fafc; transition: background 0.15s;
+}
+.custom-option:hover { background: var(--accent-primary); color: white; }
+
 </style>
 
 <!-- Toast notification -->
@@ -724,12 +747,25 @@
                                 </div>
                                 <div id="senior-dropdown-<%= issue.id %>" style="display: none; margin-bottom: 1rem;">
                                     <label for="notify_senior_id" class="form-label">Verify with Senior (Sends Discord Ping)</label>
-                                    <select name="notify_senior_id" class="form-input" style="appearance: auto;">
-                                        <option value="" disabled selected>Select a senior to notify...</option>
-                                        <% seniors.forEach(s => { %>
-                                            <option value="<%= s.id %>"><%= s.name %></option>
-                                        <% }); %>
-                                    </select>
+                                    
+<div class="custom-dropdown" id="dropdown-<%= issue.id %>">
+    <div class="custom-dropdown-selected" onclick="this.parentElement.classList.toggle('active')">
+        <span class="selected-text">Select a senior to notify...</span>
+        <span class="chevron">▼</span>
+    </div>
+    <div class="custom-dropdown-options">
+        <% seniors.forEach(s => { %>
+            <div class="custom-option" onclick="
+                const container = this.closest('.custom-dropdown');
+                container.querySelector('.selected-text').innerText = '<%= s.name %>';
+                container.querySelector('input[type=hidden]').value = '<%= s.id %>';
+                container.classList.remove('active');
+            "><%= s.name %></div>
+        <% }); %>
+    </div>
+    <input type="hidden" name="notify_senior_id" value="">
+</div>
+
                                 </div>
 
                                 <div style="display: flex; justify-content: flex-end;">
