@@ -151,16 +151,9 @@ app.get('/logout', (req, res) => {
     res.redirect('/login');
 });
 
-});
 
-// Redirect old /login to /sign-in for backward compatibility
-app.get('/login', (req, res) => {
-    res.redirect('/sign-in');
-});
 
-// Clerk sign-up page
 
-});
 
 // GET /dashboard
 app.get('/dashboard', requireAuth, async (req, res) => {
