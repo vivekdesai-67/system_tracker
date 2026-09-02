@@ -19,6 +19,5 @@
       "maxDuration": 10,
       "includeFiles": "views/**"
     }
-  },
-  "buildCommand": "npm install @clerk/express && echo 'Build with Clerk'"
+  }
 }

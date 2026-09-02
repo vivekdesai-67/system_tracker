@@ -7,28 +7,30 @@ const path = require('path');
 const cookieParser = require('cookie-parser');
 
 
-// Auto-map Vercel's NEXT_PUBLIC key to the standard Clerk key if missing
-if (!process.env.CLERK_PUBLISHABLE_KEY && process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
-    process.env.CLERK_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-}
-
-// TEMPORARY: Inject dummy keys if missing so Vercel doesn't crash while user creates a new Clerk app
-if (!process.env.CLERK_SECRET_KEY) {
-    process.env.CLERK_SECRET_KEY = 'sk_test_dummykeyforcrashevasion1234567890';
-    console.warn('⚠️ Injecting dummy CLERK_SECRET_KEY to prevent crash');
-}
-if (!process.env.CLERK_PUBLISHABLE_KEY) {
-    process.env.CLERK_PUBLISHABLE_KEY = 'pk_test_aW50ZW50LWJyZWFtLTE1OTcuY2xlcmsuYWNjb3VudHMuZGV2JA';
-    console.warn('⚠️ Injecting dummy CLERK_PUBLISHABLE_KEY to prevent crash');
-}
 
 
-const { clerkMiddleware, requireAuth, getAuth } = require('@clerk/express');
+
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
 
 const { pool, initDB } = require('./db');
 const { sendDiscordWebhook } = require('./discord');
 
 const app = express();
+
+function requireAuth(req, res, next) {
+    const token = req.cookies.token;
+    if (!token) return res.redirect('/login');
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+        req.user = decoded;
+        next();
+    } catch (err) {
+        res.clearCookie('token');
+        return res.redirect('/login');
+    }
+}
 const server = http.createServer(app);
 const io = new Server(server);
 const PORT = process.env.PORT || 3000;
@@ -59,62 +61,10 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Clerk authentication middleware
-app.use(clerkMiddleware());
+
 
 // Custom middleware to sync Clerk user with our database
-async function syncClerkUser(req, res, next) {
-    const auth = getAuth(req);
-    
-    if (!auth.userId) {
-        return next();
-    }
 
-    try {
-        // Check if user exists in our database
-        const result = await pool.query(
-            'SELECT * FROM users WHERE clerk_id = $1',
-            [auth.userId]
-        );
-
-        if (result.rows.length === 0) {
-            // Get user details from Clerk
-            const { clerkClient } = require('@clerk/express');
-            const clerkUser = await clerkClient.users.getUser(auth.userId);
-            
-            // Create user in our database
-            const insertResult = await pool.query(`
-                INSERT INTO users (
-                    name, 
-                    role, 
-                    username, 
-                    email, 
-                    clerk_id, 
-                    password_hash
-                ) VALUES ($1, $2, $3, $4, $5, $6)
-                ON CONFLICT (clerk_id) DO UPDATE 
-                SET email = EXCLUDED.email, name = EXCLUDED.name
-                RETURNING *
-            `, [
-                (clerkUser.firstName || '') + ' ' + (clerkUser.lastName || ''),
-                'junior', // Default role
-                clerkUser.username || clerkUser.emailAddresses[0]?.emailAddress,
-                clerkUser.emailAddresses[0]?.emailAddress,
-                auth.userId,
-                'clerk_managed'
-            ]);
-            
-            req.user = insertResult.rows[0];
-            console.log('[CLERK] Created new user:', req.user.email);
-        } else {
-            req.user = result.rows[0];
-        }
-        
-        next();
-    } catch (err) {
-        console.error('[CLERK] Error syncing user:', err);
-        next(err);
-    }
-}
 
 // Middleware to require admin role
 function requireAdmin(req, res, next) {
@@ -144,21 +94,63 @@ function emitToUser(userId, event, data) {
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
-app.get('/', (req, res) => {
-    const auth = getAuth(req);
-    if (auth.userId) {
-        return res.redirect('/dashboard');
-    }
-    res.redirect('/sign-in');
+app.get('/', requireAuth, (req, res) => {
+    res.redirect('/dashboard');
 });
 
-// Clerk sign-in page
-app.get('/sign-in', (req, res) => {
-    const auth = getAuth(req);
-    if (auth.userId) {
+
+app.get('/login', (req, res) => {
+    if (req.cookies.token) {
         return res.redirect('/dashboard');
     }
-    res.render('sign-in', { publishableKey: process.env.CLERK_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY });
+    res.render('login', { error: null });
+});
+
+app.post('/login', async (req, res) => {
+    const { username, password } = req.body;
+    
+    console.log('[LOGIN] Attempt for username:', username);
+    
+    try {
+        const result = await pool.query('SELECT * FROM users WHERE username = $1 OR email = $1', [username.trim().toLowerCase()]);
+        
+        if (result.rows.length === 0) {
+            console.log('[LOGIN] User not found:', username);
+            return res.render('login', { error: 'Invalid username or password.' });
+        }
+
+        const user = result.rows[0];
+        console.log('[LOGIN] User found:', user.username, user.name);
+        
+        const valid = await bcrypt.compare(password, user.password_hash);
+        
+        if (!valid) {
+            console.log('[LOGIN] Invalid password for:', username);
+            return res.render('login', { error: 'Invalid username or password.' });
+        }
+        
+        console.log('[LOGIN] Password valid for:', username);
+
+        const payload = { id: user.id, name: user.name, role: user.role, username: user.username, email: user.email };
+        const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+        
+        console.log('[LOGIN] Token created for:', username);
+        
+        res.cookie('token', token, { httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000 });
+
+        console.log('[LOGIN] Success! Redirecting to dashboard');
+        res.redirect('/dashboard');
+    } catch (err) {
+        console.error('[LOGIN] Error:', err);
+        res.render('login', { error: 'Server error: ' + err.message });
+    }
+});
+
+app.get('/logout', (req, res) => {
+    res.clearCookie('token');
+    res.redirect('/login');
+});
+
 });
 
 // Redirect old /login to /sign-in for backward compatibility
@@ -167,16 +159,11 @@ app.get('/login', (req, res) => {
 });
 
 // Clerk sign-up page
-app.get('/sign-up', (req, res) => {
-    const auth = getAuth(req);
-    if (auth.userId) {
-        return res.redirect('/dashboard');
-    }
-    res.render('sign-up', { publishableKey: process.env.CLERK_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY });
+
 });
 
 // GET /dashboard
-app.get('/dashboard', requireAuth(), syncClerkUser, async (req, res) => {
+app.get('/dashboard', requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
         let issues;
@@ -224,7 +211,7 @@ app.get('/dashboard', requireAuth(), syncClerkUser, async (req, res) => {
 });
 
 // POST /api/issues — Senior creates an issue
-app.post('/api/issues', requireAuth(), syncClerkUser, async (req, res) => {
+app.post('/api/issues', requireAuth, async (req, res) => {
     if (req.user.role !== 'senior') return res.status(403).send('Forbidden');
     const { project_name, client_name, title, description, priority, assigned_to } = req.body;
     try {
@@ -251,7 +238,7 @@ app.post('/api/issues', requireAuth(), syncClerkUser, async (req, res) => {
 });
 
 // POST /api/issues/:id/respond — Junior Accepts or Denies
-app.post('/api/issues/:id/respond', requireAuth(), syncClerkUser, async (req, res) => {
+app.post('/api/issues/:id/respond', requireAuth, async (req, res) => {
     if (req.user.role !== 'junior') return res.status(403).send('Forbidden');
     const { action } = req.body;
     const newStatus = action === 'accept' ? 'Accepted' : 'Denied';
@@ -279,7 +266,7 @@ app.post('/api/issues/:id/respond', requireAuth(), syncClerkUser, async (req, re
 });
 
 // POST /api/issues/:id/update — Junior posts update or marks resolved
-app.post('/api/issues/:id/update', requireAuth(), syncClerkUser, async (req, res) => {
+app.post('/api/issues/:id/update', requireAuth, async (req, res) => {
     if (req.user.role !== 'junior') return res.status(403).send('Forbidden');
     const { update_text, mark_resolved, notify_senior_id } = req.body;
     const newStatus = mark_resolved === 'true' ? 'Resolved' : 'In Progress';
@@ -321,12 +308,12 @@ app.post('/api/issues/:id/update', requireAuth(), syncClerkUser, async (req, res
 });
 
 // GET /profile
-app.get('/profile', requireAuth(), syncClerkUser, (req, res) => {
+app.get('/profile', requireAuth, (req, res) => {
     res.render('profile', { user: req.user, error: null, success: req.query.success || null });
 });
 
 // POST /api/profile
-app.post('/api/profile', requireAuth(), syncClerkUser, async (req, res) => {
+app.post('/api/profile', requireAuth, async (req, res) => {
     const { name, phone_number } = req.body;
     try {
         await pool.query(
@@ -341,7 +328,7 @@ app.post('/api/profile', requireAuth(), syncClerkUser, async (req, res) => {
 });
 
 // GET /admin
-app.get('/admin', requireAuth(), syncClerkUser, requireAdmin, async (req, res) => {
+app.get('/admin', requireAuth, requireAdmin, async (req, res) => {
     try {
         const usersRes = await pool.query('SELECT id, name, role, username, email, created_at FROM users ORDER BY created_at DESC');
         const issuesRes = await pool.query(`
@@ -359,7 +346,7 @@ app.get('/admin', requireAuth(), syncClerkUser, requireAdmin, async (req, res) =
 });
 
 // POST /api/admin/users/:id/update-role
-app.post('/api/admin/users/:id/update-role', requireAuth(), syncClerkUser, requireAdmin, async (req, res) => {
+app.post('/api/admin/users/:id/update-role', requireAuth, requireAdmin, async (req, res) => {
     const { role } = req.body;
     try {
         await pool.query('UPDATE users SET role = $1 WHERE id = $2', [role, req.params.id]);
