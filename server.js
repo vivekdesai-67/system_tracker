@@ -19,6 +19,22 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 
+// Add CSP headers for Clerk
+app.use((req, res, next) => {
+    res.setHeader(
+        'Content-Security-Policy',
+        "default-src 'self'; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://cdn.jsdelivr.net https://challenges.cloudflare.com; " +
+        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://*.clerk.accounts.dev; " +
+        "img-src 'self' data: https: blob:; " +
+        "font-src 'self' data: https://cdn.jsdelivr.net; " +
+        "connect-src 'self' https://*.clerk.accounts.dev https://api.clerk.dev wss://*.clerk.accounts.dev; " +
+        "frame-src 'self' https://*.clerk.accounts.dev https://challenges.cloudflare.com; " +
+        "worker-src 'self' blob:;"
+    );
+    next();
+});
+
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
