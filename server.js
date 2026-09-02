@@ -18,7 +18,7 @@ if (!process.env.CLERK_SECRET_KEY) {
     console.warn('⚠️ Injecting dummy CLERK_SECRET_KEY to prevent crash');
 }
 if (!process.env.CLERK_PUBLISHABLE_KEY) {
-    process.env.CLERK_PUBLISHABLE_KEY = 'pk_test_ZHVtbXkta2V5LWZvci1jcmFzaC1ldmFzaW9uJD';
+    process.env.CLERK_PUBLISHABLE_KEY = 'pk_test_aW50ZW50LWJyZWFtLTE1OTcuY2xlcmsuYWNjb3VudHMuZGV2JA';
     console.warn('⚠️ Injecting dummy CLERK_PUBLISHABLE_KEY to prevent crash');
 }
 
