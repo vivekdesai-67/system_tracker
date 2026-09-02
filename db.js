@@ -1,24 +1,32 @@
 require('dotenv').config();
 const { Pool } = require('pg');
 
+// Defer error to request time if DATABASE_URL is missing
+let pool;
 if (!process.env.DATABASE_URL) {
     console.error('❌ ERROR: DATABASE_URL environment variable is not set!');
-    console.error('Please set DATABASE_URL in your environment variables.');
-    throw new Error('DATABASE_URL is required');
+    // Provide a dummy pool that throws when queried
+    pool = {
+        query: async () => { throw new Error('DATABASE_URL is missing in Vercel Environment Variables!'); },
+        connect: async () => { throw new Error('DATABASE_URL is missing in Vercel Environment Variables!'); },
+        on: () => {}
+    };
+} else {
+    pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false },
+        max: 20,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 5000,
+    });
+
+    pool.on('error', (err) => {
+        console.error('Unexpected error on idle database client', err);
+    });
 }
 
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
-    max: 20, // Maximum number of clients in the pool
-    idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-    connectionTimeoutMillis: 5000, // Return an error after 5 seconds if connection could not be established
-});
 
-// Test connection on startup
-pool.on('error', (err) => {
-    console.error('Unexpected error on idle database client', err);
-});
+
 
 async function initDB() {
     const client = await pool.connect();
