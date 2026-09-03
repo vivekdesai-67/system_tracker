@@ -289,6 +289,20 @@ app.post('/api/issues/:id/respond', requireAuth, async (req, res) => {
 
 // POST /api/issues/:id/update — Junior posts update or marks resolved
 
+// Senior deletes an issue
+app.post('/api/issues/:id/delete', requireAuth, async (req, res) => {
+    if (req.user.role !== 'senior') return res.status(403).send('Forbidden');
+    const issueId = parseInt(req.params.id);
+    try {
+        // Only allow deleting if they created it
+        await pool.query('DELETE FROM issues WHERE id = $1 AND created_by = $2::int', [issueId, req.user.id]);
+        res.redirect('/dashboard?toast=' + encodeURIComponent('Issue deleted successfully.'));
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Server Error");
+    }
+});
+
 // Senior verifies a resolved task
 app.post('/api/issues/:id/verify', requireAuth, async (req, res) => {
     if (req.user.role !== 'senior') return res.status(403).send('Forbidden');
