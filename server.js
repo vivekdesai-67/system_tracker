@@ -42,6 +42,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 
+// Ignore favicon requests to prevent 404 errors in the console
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
 // CSP headers for Clerk were removed to allow GSAP and Google Fonts to load
 
 app.set('view engine', 'ejs');
