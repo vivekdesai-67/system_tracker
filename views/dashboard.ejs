@@ -858,10 +858,11 @@
     <div class="custom-dropdown-options">
         <% seniors.forEach(s => { %>
             <div class="custom-option" onclick="
-                const container = this.closest('.custom-dropdown');
+                const ownerId = this.parentElement.dataset.ownerId;
+                const container = document.getElementById(ownerId) || this.closest('.custom-dropdown');
                 container.querySelector('.selected-text').innerText = '<%= s.name %>';
                 container.querySelector('input[type=hidden]').value = '<%= s.id %>';
-                container.classList.remove('active');
+                closeAllDropdowns();
             "><%= s.name %></div>
         <% }); %>
     </div>
@@ -1330,26 +1331,26 @@ function updateFileLabel(input, labelId) {
         if (zone) zone.classList.remove('has-files');
     }
 }
-// Smart fixed-position custom dropdown — opens UPWARD to avoid covering content
+
+// Smart fixed-position custom dropdown — appends to body to escape all clipping
 function openCustomDropdown(trigger) {
     const dropdown = trigger.parentElement;
     const optionsEl = dropdown.querySelector('.custom-dropdown-options');
     const isOpen = dropdown.classList.contains('active');
 
-    // Close all other open dropdowns
-    document.querySelectorAll('.custom-dropdown.active').forEach(d => {
-        d.classList.remove('active');
-    });
+    closeAllDropdowns();
 
     if (!isOpen) {
+        dropdown.classList.add('active');
         const rect = trigger.getBoundingClientRect();
-        const spaceBelow = window.innerHeight - rect.bottom;
         const spaceAbove = rect.top;
         const listHeight = Math.min(240, spaceAbove - 16);
 
-        dropdown.classList.add('active');
+        // Move the options list to the document body so it escapes all clipping/transforms
+        document.body.appendChild(optionsEl);
+        optionsEl.dataset.ownerId = dropdown.id; // Remember where it belongs
+        optionsEl.style.display = 'block';
 
-        // Always open UPWARD — sits neatly above the trigger button
         optionsEl.style.position = 'fixed';
         optionsEl.style.left = rect.left + 'px';
         optionsEl.style.width = rect.width + 'px';
@@ -1357,17 +1358,30 @@ function openCustomDropdown(trigger) {
         optionsEl.style.overflowY = 'auto';
         optionsEl.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
         optionsEl.style.top = '';
-        optionsEl.style.zIndex = '99999';
+        optionsEl.style.zIndex = '999999';
         optionsEl.style.borderRadius = '12px 12px 0 0';
         optionsEl.style.borderBottom = 'none';
 
-        // Give the trigger a rounded bottom to connect to the open list above
         trigger.style.borderRadius = '0 0 var(--radius-md) var(--radius-md)';
     }
 }
 
 // Reset trigger border when dropdown closes
 function closeAllDropdowns() {
+    // Return all body-appended options back to their parent dropdowns
+    document.querySelectorAll('body > .custom-dropdown-options').forEach(optionsEl => {
+        const owner = document.getElementById(optionsEl.dataset.ownerId);
+        if (owner) {
+            owner.appendChild(optionsEl);
+            owner.classList.remove('active');
+            optionsEl.style.display = '';
+            const trigger = owner.querySelector('.custom-dropdown-selected');
+            if (trigger) trigger.style.borderRadius = '';
+        } else {
+            optionsEl.remove(); // Failsafe
+        }
+    });
+
     document.querySelectorAll('.custom-dropdown.active').forEach(d => {
         d.classList.remove('active');
         const trigger = d.querySelector('.custom-dropdown-selected');
