@@ -179,6 +179,10 @@ app.get('/dashboard', requireAuth, async (req, res) => {
         
         const startTime = Date.now();
         
+        if (req.user.role === 'admin') {
+            return res.redirect('/admin');
+        }
+        
         if (req.user.role === 'senior') {
             const result = await pool.query(`
                 SELECT i.*, u.name AS assigned_name, u.email AS assigned_email
@@ -188,17 +192,6 @@ app.get('/dashboard', requireAuth, async (req, res) => {
                 ORDER BY i.created_at DESC
                 LIMIT 100
             `, [userId]);
-            issues = result.rows;
-        } else if (req.user.role === 'admin') {
-            const result = await pool.query(`
-                SELECT i.*, u1.name AS created_name, u2.name AS assigned_name
-                FROM issues i 
-                JOIN users u1 ON u1.id = i.created_by
-                JOIN users u2 ON u2.id = i.assigned_to
-                WHERE (i.is_deleted = false OR i.is_deleted IS NULL)
-                ORDER BY i.created_at DESC
-                LIMIT 200
-            `);
             issues = result.rows;
         } else {
             const result = await pool.query(`
@@ -248,7 +241,7 @@ app.get('/dashboard', requireAuth, async (req, res) => {
 
 // POST /api/issues — Senior creates an issue
 app.post('/api/issues', requireAuth, upload.array('files', 5), async (req, res) => {
-    if (req.user.role !== 'senior' && req.user.role !== 'admin') return res.status(403).send('Forbidden');
+    if (req.user.role !== 'senior') return res.status(403).send('Forbidden');
     const { project_name, client_name, title, description, priority, assigned_to, deadline } = req.body;
     try {
         const juniorRes = await pool.query('SELECT * FROM users WHERE id = $1::int', [parseInt(assigned_to)]);
@@ -324,10 +317,10 @@ app.post('/api/issues/:id/respond', requireAuth, async (req, res) => {
 
 // Senior soft deletes an issue
 app.post('/api/issues/:id/delete', requireAuth, async (req, res) => {
-    if (req.user.role !== 'senior' && req.user.role !== 'admin') return res.status(403).send('Forbidden');
+    if (req.user.role !== 'senior') return res.status(403).send('Forbidden');
     const issueId = parseInt(req.params.id);
     try {
-        await pool.query('UPDATE issues SET is_deleted = true WHERE id = $1 AND (created_by = $2::int OR $3::text = \'admin\')', [issueId, req.user.id, req.user.role]);
+        await pool.query('UPDATE issues SET is_deleted = true WHERE id = $1 AND created_by = $2::int', [issueId, req.user.id]);
         if (req.headers.accept && req.headers.accept.includes('application/json')) {
             return res.json({ success: true, message: 'Issue moved to recycle bin.' });
         }
@@ -340,10 +333,10 @@ app.post('/api/issues/:id/delete', requireAuth, async (req, res) => {
 
 // Senior restores an issue from recycle bin
 app.post('/api/issues/:id/restore', requireAuth, async (req, res) => {
-    if (req.user.role !== 'senior' && req.user.role !== 'admin') return res.status(403).send('Forbidden');
+    if (req.user.role !== 'senior') return res.status(403).send('Forbidden');
     const issueId = parseInt(req.params.id);
     try {
-        await pool.query('UPDATE issues SET is_deleted = false WHERE id = $1 AND (created_by = $2::int OR $3::text = \'admin\')', [issueId, req.user.id, req.user.role]);
+        await pool.query('UPDATE issues SET is_deleted = false WHERE id = $1 AND created_by = $2::int', [issueId, req.user.id]);
         if (req.headers.accept && req.headers.accept.includes('application/json')) {
             return res.json({ success: true, message: 'Issue restored successfully.' });
         }
@@ -356,14 +349,14 @@ app.post('/api/issues/:id/restore', requireAuth, async (req, res) => {
 
 // Senior verifies a resolved task
 app.post('/api/issues/:id/verify', requireAuth, async (req, res) => {
-    if (req.user.role !== 'senior' && req.user.role !== 'admin') return res.status(403).send('Forbidden');
+    if (req.user.role !== 'senior') return res.status(403).send('Forbidden');
     const issueId = parseInt(req.params.id);
     try {
         const result = await pool.query(`
             UPDATE issues
             SET status = 'Verified', updated_at = NOW(),
                 updates = COALESCE(updates, '[]'::jsonb) || $1::jsonb
-            WHERE id = $2 AND (created_by = $3::int OR $4::text = 'admin') RETURNING *
+            WHERE id = $2 AND created_by = $3::int RETURNING *
         `, [
             JSON.stringify([{ text: "Senior Verified this resolution.", timestamp: new Date().toISOString(), status_at_time: 'Verified' }]),
             issueId,
