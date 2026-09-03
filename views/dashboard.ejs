@@ -1330,7 +1330,7 @@ function updateFileLabel(input, labelId) {
         if (zone) zone.classList.remove('has-files');
     }
 }
-// Smart fixed-position custom dropdown
+// Smart fixed-position custom dropdown — opens UPWARD to avoid covering content
 function openCustomDropdown(trigger) {
     const dropdown = trigger.parentElement;
     const optionsEl = dropdown.querySelector('.custom-dropdown-options');
@@ -1343,21 +1343,41 @@ function openCustomDropdown(trigger) {
 
     if (!isOpen) {
         const rect = trigger.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        const listHeight = Math.min(240, spaceAbove - 16);
+
         dropdown.classList.add('active');
-        // Position options panel at fixed screen coordinates
-        optionsEl.style.top = (rect.bottom + 4) + 'px';
+
+        // Always open UPWARD — sits neatly above the trigger button
+        optionsEl.style.position = 'fixed';
         optionsEl.style.left = rect.left + 'px';
         optionsEl.style.width = rect.width + 'px';
-        optionsEl.style.maxHeight = '240px';
+        optionsEl.style.maxHeight = listHeight + 'px';
         optionsEl.style.overflowY = 'auto';
+        optionsEl.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+        optionsEl.style.top = '';
+        optionsEl.style.zIndex = '99999';
+        optionsEl.style.borderRadius = '12px 12px 0 0';
+        optionsEl.style.borderBottom = 'none';
+
+        // Give the trigger a rounded bottom to connect to the open list above
+        trigger.style.borderRadius = '0 0 var(--radius-md) var(--radius-md)';
     }
+}
+
+// Reset trigger border when dropdown closes
+function closeAllDropdowns() {
+    document.querySelectorAll('.custom-dropdown.active').forEach(d => {
+        d.classList.remove('active');
+        const trigger = d.querySelector('.custom-dropdown-selected');
+        if (trigger) trigger.style.borderRadius = '';
+    });
 }
 
 // Close dropdown when clicking outside
 document.addEventListener('click', function(e) {
-    if (!e.target.closest('.custom-dropdown')) {
-        document.querySelectorAll('.custom-dropdown.active').forEach(d => d.classList.remove('active'));
-    }
+    if (!e.target.closest('.custom-dropdown')) closeAllDropdowns();
 });
 
 </script>
