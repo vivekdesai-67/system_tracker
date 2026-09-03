@@ -294,8 +294,10 @@ app.post('/api/issues/:id/delete', requireAuth, async (req, res) => {
     if (req.user.role !== 'senior') return res.status(403).send('Forbidden');
     const issueId = parseInt(req.params.id);
     try {
-        // Only allow deleting if they created it
         await pool.query('DELETE FROM issues WHERE id = $1 AND created_by = $2::int', [issueId, req.user.id]);
+        if (req.headers.accept && req.headers.accept.includes('application/json')) {
+            return res.json({ success: true, message: 'Issue deleted successfully.' });
+        }
         res.redirect('/dashboard?toast=' + encodeURIComponent('Issue deleted successfully.'));
     } catch (err) {
         console.error(err);
