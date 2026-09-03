@@ -1,4 +1,3 @@
-// Clerk Authentication Server v2.0 - Force Vercel Update
 require('dotenv').config();
 const express = require('express');
 const http = require('http');
