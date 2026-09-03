@@ -334,7 +334,7 @@
 }
 .custom-dropdown-selected:hover { border-color: var(--accent-primary); }
 .custom-dropdown-options {
-    position: relative; margin-top: 8px;
+    position: fixed; z-index: 99999;
     background: #1e293b; border: 1px solid var(--border-color); border-radius: var(--radius-md);
     max-height: 200px; overflow-y: auto; z-index: 100; display: none;
     box-shadow: 0 10px 25px rgba(0,0,0,0.5);
@@ -851,7 +851,7 @@
                                     <label for="notify_senior_id" class="form-label">Verify with Senior (Sends Discord Ping)</label>
                                     
 <div class="custom-dropdown" id="dropdown-<%= issue.id %>">
-    <div class="custom-dropdown-selected" onclick="this.parentElement.classList.toggle('active')">
+    <div class="custom-dropdown-selected" onclick="openCustomDropdown(this)">
         <span class="selected-text">Select a senior to notify...</span>
         <span class="chevron">▼</span>
     </div>
@@ -1330,4 +1330,34 @@ function updateFileLabel(input, labelId) {
         if (zone) zone.classList.remove('has-files');
     }
 }
+// Smart fixed-position custom dropdown
+function openCustomDropdown(trigger) {
+    const dropdown = trigger.parentElement;
+    const optionsEl = dropdown.querySelector('.custom-dropdown-options');
+    const isOpen = dropdown.classList.contains('active');
+
+    // Close all other open dropdowns
+    document.querySelectorAll('.custom-dropdown.active').forEach(d => {
+        d.classList.remove('active');
+    });
+
+    if (!isOpen) {
+        const rect = trigger.getBoundingClientRect();
+        dropdown.classList.add('active');
+        // Position options panel at fixed screen coordinates
+        optionsEl.style.top = (rect.bottom + 4) + 'px';
+        optionsEl.style.left = rect.left + 'px';
+        optionsEl.style.width = rect.width + 'px';
+        optionsEl.style.maxHeight = '240px';
+        optionsEl.style.overflowY = 'auto';
+    }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.custom-dropdown')) {
+        document.querySelectorAll('.custom-dropdown.active').forEach(d => d.classList.remove('active'));
+    }
+});
+
 </script>
