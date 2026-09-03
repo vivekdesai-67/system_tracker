@@ -546,6 +546,51 @@ app.post('/api/profile', requireAuth, async (req, res) => {
     }
 });
 
+// GET /api/admin/export - Export tracking data to CSV
+app.get('/api/admin/export', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const issuesRes = await pool.query(`
+            SELECT i.id, i.project_name, i.title, i.status, i.priority, 
+                   u1.name AS created_name, u2.name AS assigned_name, i.created_at, i.deadline
+            FROM issues i 
+            JOIN users u1 ON u1.id = i.created_by 
+            JOIN users u2 ON u2.id = i.assigned_to 
+            ORDER BY i.created_at DESC
+        `);
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename=\"systemcall_tracking_data.csv\"');
+
+        // CSV Header
+        let csv = 'ID,Project,Title,Status,Priority,Assigned By (Senior),Assigned To (Junior),Created At,Deadline\n';
+
+        // Escape double quotes and wrap in quotes to prevent CSV injection / breaking
+        const escapeCSV = (str) => {
+            if (!str) return '""';
+            return '"' + String(str).replace(/"/g, '""') + '"';
+        };
+
+        issuesRes.rows.forEach(i => {
+            csv += [
+                i.id,
+                escapeCSV(i.project_name),
+                escapeCSV(i.title),
+                escapeCSV(i.status),
+                escapeCSV(i.priority),
+                escapeCSV(i.created_name),
+                escapeCSV(i.assigned_name),
+                escapeCSV(i.created_at ? new Date(i.created_at).toLocaleString() : ''),
+                escapeCSV(i.deadline ? new Date(i.deadline).toLocaleString() : '')
+            ].join(',') + '\n';
+        });
+
+        res.send(csv);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server error exporting data.');
+    }
+});
+
 // GET /admin
 app.get('/admin', requireAuth, requireAdmin, async (req, res) => {
     try {

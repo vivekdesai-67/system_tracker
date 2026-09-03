@@ -107,6 +107,42 @@
         <% if (error) { %> <div class="alert alert-error"><%= error %></div> <% } %>
         <% if (success) { %> <div class="alert alert-success"><%= success %></div> <% } %>
 
+        
+        <style>
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+        .stat-card { padding: 24px; border-radius: var(--radius-xl); background: var(--glass-bg); border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); display: flex; flex-direction: column; gap: 8px; }
+        .stat-value { font-size: 36px; font-weight: 700; color: var(--text-primary); line-height: 1; letter-spacing: -0.02em; }
+        .stat-label { font-size: 12px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; display: flex; align-items: center; gap: 6px; }
+        .export-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 12px; font-weight: 600; background: var(--accent-primary); color: white; border-radius: var(--radius-full); text-decoration: none; transition: background 0.2s; border: none; cursor: pointer; }
+        .export-btn:hover { background: var(--accent-primary-hover); }
+        </style>
+        
+        <%
+            const totalIssues = issues.length;
+            const pendingIssues = issues.filter(i => i.status === 'Pending Response').length;
+            const activeIssues = issues.filter(i => i.status === 'In Progress' || i.status === 'Accepted').length;
+            const resolvedIssues = issues.filter(i => i.status === 'Resolved' || i.status === 'Verified').length;
+        %>
+        <div class="section-title" style="margin-bottom: 16px; font-weight: 600; font-size: 16px;">System Overview</div>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label"><span style="color:var(--text-muted)">📊</span> Total Tracking</div>
+                <div class="stat-value"><%= totalIssues %></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label"><span style="color:var(--accent-warning)">🟡</span> Pending</div>
+                <div class="stat-value"><%= pendingIssues %></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label"><span style="color:var(--accent-secondary)">🔵</span> In Progress</div>
+                <div class="stat-value"><%= activeIssues %></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label"><span style="color:var(--accent-primary)">🟢</span> Solved</div>
+                <div class="stat-value"><%= resolvedIssues %></div>
+            </div>
+        </div>
+
         <div class="admin-layout">
             
             <div style="min-width: 0;">
@@ -193,9 +229,15 @@
                 </div>
 
                 <!-- Issues Table -->
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-                    <h2 style="font-size: 16px; font-weight: 600;">All Issues</h2>
-                    <span style="font-size: 12px; color: var(--text-muted);"><%= issues.length %> Total</span>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; margin-top: 32px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <h2 style="font-size: 16px; font-weight: 600; margin: 0;">All Issues Tracking Data</h2>
+                        <span style="font-size: 12px; color: var(--text-muted);"><%= issues.length %> Total</span>
+                    </div>
+                    <a href="/api/admin/export" class="export-btn" download="systemcall_tracking_data.csv">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        Export CSV
+                    </a>
                 </div>
                 <div class="glass" style="padding: 8px 0; overflow-x: auto;">
                     <table class="data-table">
@@ -205,8 +247,10 @@
                                 <th>Project</th>
                                 <th>Title</th>
                                 <th>Status</th>
-                                <th>Senior</th>
-                                <th>Junior</th>
+                                <th>Priority</th>
+                                <th>Senior (Assigner)</th>
+                                <th>Junior (Assignee)</th>
+                                <th>Deadline</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -216,9 +260,15 @@
                                     <td>#<%= i.id %></td>
                                     <td><%= i.project_name %></td>
                                     <td style="font-weight: 500;"><%= i.title %></td>
-                                    <td><%= i.status %></td>
+                                    <td>
+                                        <span class="priority-chip" style="background: var(--chip-bg); padding: 2px 8px; font-size: 11px;"><%= i.status %></span>
+                                    </td>
+                                    <td><%= i.priority %></td>
                                     <td style="color: var(--text-secondary);"><%= i.created_name %></td>
                                     <td style="color: var(--text-secondary);"><%= i.assigned_name %></td>
+                                    <td style="font-size: 11px; color: var(--text-muted);">
+                                        <%= i.deadline ? new Date(i.deadline).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-' %>
+                                    </td>
                                     <td>
                                         <form action="/api/admin/issues/<%= i.id %>/delete" method="POST" style="margin: 0;" onsubmit="return confirm('Permanently delete this issue?');">
                                             <button type="submit" class="btn-danger">Delete</button>
