@@ -157,6 +157,32 @@ app.get('/logout', (req, res) => {
 
 
 
+// GET /recycle
+app.get('/recycle', requireAuth, async (req, res) => {
+    if (req.user.role !== 'senior') return res.redirect('/dashboard');
+    try {
+        const userId = req.user.id;
+        const result = await pool.query(`
+            SELECT i.*, u.name AS assigned_name, u.email AS assigned_email
+            FROM issues i 
+            JOIN users u ON u.id = i.assigned_to
+            WHERE i.created_by = $1::int AND i.is_deleted = true
+            ORDER BY i.created_at DESC
+            LIMIT 100
+        `, [userId]);
+        
+        const toastMsg = req.query.toast ? req.query.toast : null;
+        res.render('recycle', { 
+            user: req.user, 
+            issues: result.rows,
+            toast: toastMsg 
+        });
+    } catch (err) {
+        console.error("Dashboard error:", err);
+        res.status(500).send("Server Error");
+    }
+});
+
 // GET /dashboard
 app.get('/dashboard', requireAuth, async (req, res) => {
     try {
@@ -170,7 +196,7 @@ app.get('/dashboard', requireAuth, async (req, res) => {
                 SELECT i.*, u.name AS assigned_name, u.email AS assigned_email
                 FROM issues i 
                 JOIN users u ON u.id = i.assigned_to
-                WHERE i.created_by = $1::int 
+                WHERE i.created_by = $1::int AND (i.is_deleted = false OR i.is_deleted IS NULL)
                 ORDER BY i.created_at DESC
                 LIMIT 100
             `, [userId]);
@@ -180,7 +206,7 @@ app.get('/dashboard', requireAuth, async (req, res) => {
                 SELECT i.*, u.name AS created_name, u.email AS senior_email
                 FROM issues i 
                 JOIN users u ON u.id = i.created_by
-                WHERE i.assigned_to = $1::int 
+                WHERE i.assigned_to = $1::int AND (i.is_deleted = false OR i.is_deleted IS NULL)
                 ORDER BY i.created_at DESC
                 LIMIT 100
             `, [userId]);
@@ -289,16 +315,32 @@ app.post('/api/issues/:id/respond', requireAuth, async (req, res) => {
 
 // POST /api/issues/:id/update — Junior posts update or marks resolved
 
-// Senior deletes an issue
+// Senior soft deletes an issue
 app.post('/api/issues/:id/delete', requireAuth, async (req, res) => {
     if (req.user.role !== 'senior') return res.status(403).send('Forbidden');
     const issueId = parseInt(req.params.id);
     try {
-        await pool.query('DELETE FROM issues WHERE id = $1 AND created_by = $2::int', [issueId, req.user.id]);
+        await pool.query('UPDATE issues SET is_deleted = true WHERE id = $1 AND created_by = $2::int', [issueId, req.user.id]);
         if (req.headers.accept && req.headers.accept.includes('application/json')) {
-            return res.json({ success: true, message: 'Issue deleted successfully.' });
+            return res.json({ success: true, message: 'Issue moved to recycle bin.' });
         }
-        res.redirect('/dashboard?toast=' + encodeURIComponent('Issue deleted successfully.'));
+        res.redirect('/dashboard?toast=' + encodeURIComponent('Issue moved to recycle bin.'));
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Server Error");
+    }
+});
+
+// Senior restores an issue from recycle bin
+app.post('/api/issues/:id/restore', requireAuth, async (req, res) => {
+    if (req.user.role !== 'senior') return res.status(403).send('Forbidden');
+    const issueId = parseInt(req.params.id);
+    try {
+        await pool.query('UPDATE issues SET is_deleted = false WHERE id = $1 AND created_by = $2::int', [issueId, req.user.id]);
+        if (req.headers.accept && req.headers.accept.includes('application/json')) {
+            return res.json({ success: true, message: 'Issue restored successfully.' });
+        }
+        res.redirect('/recycle?toast=' + encodeURIComponent('Issue restored successfully.'));
     } catch (err) {
         console.error(err);
         res.status(500).send("Server Error");

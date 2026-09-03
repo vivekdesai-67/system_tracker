@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head', { title: 'Recycle Bin - SystemTracker' }) %>
+    <style>
+        .recycle-container { padding: 40px; max-width: 1200px; margin: 0 auto; }
+        .recycle-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .recycle-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
+        .deleted-card { 
+            background: var(--card-bg); border: 1px solid var(--border-color); 
+            border-radius: var(--radius-lg); padding: 20px;
+            display: flex; flex-direction: column; gap: 12px;
+        }
+        .deleted-card h3 { margin: 0; font-size: 16px; color: var(--text-primary); }
+        .deleted-card p { margin: 0; font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+        .meta-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); }
+    </style>
+</head>
+<body>
+    <div class="recycle-container">
+        <div class="recycle-header">
+            <div>
+                <h1 style="margin: 0 0 8px 0;">🗑️ Recycle Bin</h1>
+                <p style="margin: 0; color: var(--text-secondary);">Issues you have deleted. Click Restore to put them back on the Kanban board.</p>
+            </div>
+            <a href="/dashboard" class="btn btn-secondary">← Back to Dashboard</a>
+        </div>
+
+        <% if (issues.length === 0) { %>
+            <div style="text-align: center; padding: 60px; color: var(--text-muted); background: rgba(255,255,255,0.02); border-radius: var(--radius-lg); border: 1px dashed var(--border-color);">
+                <div style="font-size: 40px; margin-bottom: 16px;">✨</div>
+                The recycle bin is empty.
+            </div>
+        <% } else { %>
+            <div class="recycle-grid">
+                <% issues.forEach(issue => { %>
+                    <div class="deleted-card">
+                        <div class="meta-row">
+                            <span>#<%= issue.id %> · <%= issue.project_name %></span>
+                            <span style="color: #ef4444;">Deleted</span>
+                        </div>
+                        <h3><%= issue.title %></h3>
+                        <p><%= issue.description.substring(0, 100) %><%= issue.description.length > 100 ? '...' : '' %></p>
+                        <div class="meta-row">
+                            <span>Assigned to: <%= issue.assigned_name %></span>
+                        </div>
+                        <div style="margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border-color);">
+                            <button class="btn btn-primary" style="width: 100%; background: #10b981;" onclick="restoreIssue(<%= issue.id %>, this)">
+                                ↺ Restore Issue
+                            </button>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+        <% } %>
+    </div>
+
+    <!-- Toast notification -->
+    <div class="toast" id="global-toast">
+        <span id="toast-icon">✓</span>
+        <span id="toast-message"></span>
+    </div>
+
+    <script>
+        <% if (toast) { %> showToast("<%= toast %>"); <% } %>
+        
+        function showToast(msg) {
+            const toast = document.getElementById('global-toast');
+            document.getElementById('toast-message').innerText = msg;
+            toast.style.transform = 'translateY(0)';
+            toast.style.opacity = '1';
+            setTimeout(() => {
+                toast.style.transform = 'translateY(80px)';
+                toast.style.opacity = '0';
+            }, 3000);
+        }
+
+        async function restoreIssue(id, btnElement) {
+            try {
+                const res = await fetch('/api/issues/' + id + '/restore', {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json' }
+                });
+                if (res.ok) {
+                    const card = btnElement.closest('.deleted-card');
+                    if (card) {
+                        card.style.transition = 'all 0.3s';
+                        card.style.transform = 'scale(0.9)';
+                        card.style.opacity = '0';
+                        setTimeout(() => card.remove(), 300);
+                        
+                        // Check if grid is empty after removal
+                        setTimeout(() => {
+                            if (document.querySelectorAll('.deleted-card').length === 0) {
+                                window.location.reload();
+                            }
+                        }, 350);
+                    }
+                    showToast('Issue restored successfully');
+                } else {
+                    showToast('Failed to restore issue');
+                }
+            } catch (e) {
+                console.error(e);
+                showToast('Error restoring issue');
+            }
+        }
+    </script>
+</body>
+</html>
