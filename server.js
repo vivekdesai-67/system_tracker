@@ -368,6 +368,43 @@ app.get('/api/files/:id', requireAuth, async (req, res) => {
     }
 });
 
+// ── File Preview (HTML conversion for Word/Text/CSV) ───────────────────────
+app.get('/api/files/:id/preview', requireAuth, async (req, res) => {
+    const fileId = parseInt(req.params.id);
+    try {
+        const result = await pool.query('SELECT * FROM issue_files WHERE id = $1', [fileId]);
+        if (result.rows.length === 0) return res.status(404).json({ error: 'File not found' });
+        const file = result.rows[0];
+        const buffer = Buffer.from(file.file_data, 'base64');
+        const ft = file.file_type;
+        const fname = file.file_name.toLowerCase();
+
+        // Word documents → convert to HTML using mammoth
+        if (ft === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || fname.endsWith('.docx')) {
+            const mammoth = require('mammoth');
+            const { value: html } = await mammoth.convertToHtml({ buffer });
+            return res.json({ type: 'html', content: html });
+        }
+
+        // Plain text / CSV / code → return as text
+        if (ft.startsWith('text/') || fname.endsWith('.txt') || fname.endsWith('.csv') || fname.endsWith('.log')) {
+            const text = buffer.toString('utf8');
+            return res.json({ type: 'text', content: text, filename: file.file_name });
+        }
+
+        // Excel (.xlsx) → tell client it's not previewable but offer download
+        if (fname.endsWith('.xlsx') || fname.endsWith('.xls')) {
+            return res.json({ type: 'excel', filename: file.file_name });
+        }
+
+        // Fallback
+        return res.json({ type: 'download', filename: file.file_name });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // ── File List: get files for an issue ─────────────────────────────────────────
 app.get('/api/issues/:id/files', requireAuth, async (req, res) => {
     const issueId = parseInt(req.params.id);

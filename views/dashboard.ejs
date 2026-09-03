@@ -401,6 +401,15 @@
     padding: 8px 20px; border: 1px solid var(--accent-primary); border-radius: 8px;
 }
 
+/* Word doc preview rendered HTML */
+.doc-preview h1, .doc-preview h2, .doc-preview h3 { color: #f1f5f9; margin: 16px 0 8px; }
+.doc-preview p { margin: 0 0 10px; }
+.doc-preview table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+.doc-preview td, .doc-preview th { border: 1px solid #334155; padding: 8px 12px; }
+.doc-preview th { background: rgba(16,185,129,0.1); color: #10b981; }
+.doc-preview strong { color: #f1f5f9; }
+.doc-preview a { color: var(--accent-primary); }
+
 </style>
 
 <!-- Toast notification -->
@@ -1237,29 +1246,71 @@ function setEditPriority(level, btn) {
 </div>
 
 <script>
-function openFilePreview(fileId, fileName, fileType) {
+async function openFilePreview(fileId, fileName, fileType) {
     const modal = document.getElementById('fileModal');
     const body = document.getElementById('fileModalBody');
     const nameEl = document.getElementById('fileModalName');
     const dlLink = document.getElementById('fileModalDownload');
+
     nameEl.textContent = fileName;
     dlLink.href = '/api/files/' + fileId;
     dlLink.download = fileName;
-    body.innerHTML = '';
+
+    // Show loading spinner
+    body.innerHTML = '<div style="padding:60px;text-align:center;color:#94a3b8;"><div style="font-size:32px;margin-bottom:12px;">⏳</div><div>Loading preview...</div></div>';
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+
     const url = '/api/files/' + fileId;
+    const fname = fileName.toLowerCase();
+
+    // Images → direct embed
     if (fileType.startsWith('image/')) {
         const img = document.createElement('img');
         img.src = url; img.alt = fileName;
+        body.innerHTML = '';
         body.appendChild(img);
-    } else if (fileType === 'application/pdf') {
+        return;
+    }
+
+    // PDFs → iframe embed
+    if (fileType === 'application/pdf') {
         const iframe = document.createElement('iframe');
         iframe.src = url;
+        body.innerHTML = '';
         body.appendChild(iframe);
-    } else {
-        body.innerHTML = '<div style="padding:40px;text-align:center;color:#94a3b8;"><div style="font-size:48px;margin-bottom:16px;">📁</div><div style="font-size:16px;margin-bottom:20px;">' + fileName + '</div><a href="' + url + '" download="' + fileName + '" class="btn btn-primary" style="padding:10px 24px;">⬇ Download File</a></div>';
+        return;
     }
-    modal.classList.add('active');
-    document.body.style.overflow = 'hidden';
+
+    // Word / Text / CSV → fetch from /preview endpoint
+    if (fname.endsWith('.docx') || fname.endsWith('.doc') ||
+        fname.endsWith('.txt') || fname.endsWith('.csv') || fname.endsWith('.log') ||
+        fileType.startsWith('text/')) {
+        try {
+            const resp = await fetch('/api/files/' + fileId + '/preview');
+            const data = await resp.json();
+
+            if (data.type === 'html') {
+                // Word doc converted to HTML
+                body.innerHTML = '<div style="padding:24px;max-height:78vh;overflow-y:auto;color:#e2e8f0;line-height:1.7;font-size:14px;" class="doc-preview">' + data.content + '</div>';
+                return;
+            }
+            if (data.type === 'text') {
+                // Plain text / CSV
+                const pre = document.createElement('pre');
+                pre.style.cssText = 'padding:24px;max-height:78vh;overflow:auto;color:#e2e8f0;font-size:13px;line-height:1.6;white-space:pre-wrap;word-break:break-all;font-family:monospace;margin:0;';
+                pre.textContent = data.content;
+                body.innerHTML = '';
+                body.appendChild(pre);
+                return;
+            }
+        } catch(e) {
+            console.error('Preview error:', e);
+        }
+    }
+
+    // Fallback: download prompt
+    body.innerHTML = '<div style="padding:50px;text-align:center;color:#94a3b8;"><div style="font-size:52px;margin-bottom:16px;">📁</div><div style="font-size:16px;font-weight:600;color:#e2e8f0;margin-bottom:8px;">' + fileName + '</div><div style="margin-bottom:24px;font-size:13px;">This file type cannot be previewed in the browser.</div><a href="' + url + '" download="' + fileName + '" class="btn btn-primary" style="padding:10px 28px;font-size:14px;">⬇ Download File</a></div>';
 }
 function closeFileModal() {
     document.getElementById('fileModal').classList.remove('active');
