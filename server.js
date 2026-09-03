@@ -238,16 +238,18 @@ app.get('/dashboard', requireAuth, async (req, res) => {
 // POST /api/issues — Senior creates an issue
 app.post('/api/issues', requireAuth, upload.array('files', 5), async (req, res) => {
     if (req.user.role !== 'senior') return res.status(403).send('Forbidden');
-    const { project_name, client_name, title, description, priority, assigned_to } = req.body;
+    const { project_name, client_name, title, description, priority, assigned_to, deadline } = req.body;
     try {
         const juniorRes = await pool.query('SELECT * FROM users WHERE id = $1::int', [parseInt(assigned_to)]);
         if (juniorRes.rows.length === 0) return res.status(400).send('Invalid junior selected.');
         const junior = juniorRes.rows[0];
 
+        const deadlineVal = deadline ? new Date(deadline) : null;
+
         const result = await pool.query(`
-            INSERT INTO issues (project_name, client_name, title, description, priority, created_by, assigned_to, status)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, 'Pending Response') RETURNING *
-        `, [project_name, client_name, title, description, priority, req.user.id, assigned_to]);
+            INSERT INTO issues (project_name, client_name, title, description, priority, created_by, assigned_to, status, deadline)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, 'Pending Response', $8) RETURNING *
+        `, [project_name, client_name, title, description, priority, req.user.id, assigned_to, deadlineVal]);
 
         const issue = result.rows[0];
         issue.assigned_name = junior.name;
@@ -264,7 +266,13 @@ app.post('/api/issues', requireAuth, upload.array('files', 5), async (req, res) 
         }
 
         emitToUser(junior.id, 'new_issue', issue);
-        sendDiscordWebhook(`🚀 **New Issue Assigned!**\n**Title:** ${title}\n**Project:** ${project_name}\n**Client:** ${client_name}\n**Priority:** ${priority}\n**Assigned To:** ${junior.name} by ${req.user.name}`);
+        
+        const discordMsg = `🚀 **New Issue Assigned!**\n**Title:** ${title}\n**Project:** ${project_name}\n**Client:** ${client_name}\n**Priority:** ${priority}\n**Timeline:** ${deadlineVal ? deadlineVal.toLocaleString('en-IN') : 'None specified'}\n**Assigned To:** ${junior.name} by ${req.user.name}`;
+        if (junior.discord_id) {
+            sendDiscordWebhook(discordMsg, 0x3b82f6, `<@${junior.discord_id}>`);
+        } else {
+            sendDiscordWebhook(discordMsg, 0x3b82f6);
+        }
 
         res.redirect(`/dashboard?toast=Issue assigned to ${junior.name}`);
     } catch (err) {

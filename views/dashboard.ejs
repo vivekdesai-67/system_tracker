@@ -664,6 +664,10 @@
                     <textarea id="description" name="description" class="form-input" rows="3" placeholder="Detailed description of the issue…" style="resize: vertical;"></textarea>
                 </div>
                 <div class="form-group">
+                    <label for="deadline">Timeline (Deadline) <span style="color:var(--text-muted); font-size:11px;">(optional)</span></label>
+                    <input type="datetime-local" id="deadline" name="deadline" class="form-input">
+                </div>
+                <div class="form-group">
                     <label>Priority</label>
                     <div class="priority-group" id="priority-group">
                         <button type="button" class="priority-btn active-low" data-val="Low" onclick="setPriority('Low')">🟢 Low</button>
@@ -722,6 +726,11 @@
                                     <div class="issue-meta" style="margin-top: 0; margin-bottom: 0;">
                                         <span class="priority-chip p-<%= issue.priority.toLowerCase() %>"><%= issue.priority %></span>
                                         <span class="assignee-chip">👤 <%= issue.assigned_name %></span>
+                                        <% if (issue.deadline) { %>
+                                            <span class="priority-chip" style="background: rgba(16,185,129,0.1); color: #10b981; border: 1px solid rgba(16,185,129,0.2);">
+                                                ⏳ Due: <%= new Date(issue.deadline).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) %>
+                                            </span>
+                                        <% } %>
                                     </div>
                                     
                                     <div style="display: flex; gap: 8px; margin-top: 12px;">
@@ -795,7 +804,14 @@
                         <% if (issue.description) { %>
                             <div class="inbox-desc"><%= issue.description %></div>
                         <% } %>
-                        <span class="priority-chip p-<%= issue.priority.toLowerCase() %>" style="margin-top: 8px; display: inline-block;"><%= issue.priority %></span>
+                        <div style="margin-top: 8px; display: flex; gap: 8px; align-items: center;">
+                            <span class="priority-chip p-<%= issue.priority.toLowerCase() %>"><%= issue.priority %></span>
+                            <% if (issue.deadline) { %>
+                                <span class="priority-chip" style="background: rgba(16,185,129,0.1); color: #10b981; border: 1px solid rgba(16,185,129,0.2);">
+                                    ⏳ Due: <%= new Date(issue.deadline).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) %>
+                                </span>
+                            <% } %>
+                        </div>
                     </div>
                     <div class="inbox-actions">
                         <form action="/api/issues/<%= issue.id %>/respond" method="POST">
@@ -832,7 +848,14 @@
                         <div style="flex: 1;">
                             <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">#<%= issue.id %> · <%= issue.project_name %> · by <%= issue.created_name %></div>
                             <div style="font-weight: 600; font-size: var(--text-base);"><%= issue.title %></div>
-                            <span class="priority-chip p-<%= issue.priority.toLowerCase() %>" style="margin-top: 6px; display: inline-block;"><%= issue.priority %></span>
+                            <div style="margin-top: 6px; display: flex; gap: 8px; align-items: center;">
+                                <span class="priority-chip p-<%= issue.priority.toLowerCase() %>"><%= issue.priority %></span>
+                                <% if (issue.deadline) { %>
+                                    <span class="priority-chip" style="background: rgba(16,185,129,0.1); color: #10b981; border: 1px solid rgba(16,185,129,0.2);">
+                                        ⏳ Due: <%= new Date(issue.deadline).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) %>
+                                    </span>
+                                <% } %>
+                            </div>
                         </div>
                         <div style="color: var(--text-muted); font-size: 20px; transition: transform 300ms;" id="chevron-<%= issue.id %>">›</div>
                     </div>

@@ -75,6 +75,7 @@ async function initDB() {
             
             ALTER TABLE users ADD COLUMN IF NOT EXISTS discord_id VARCHAR(255) DEFAULT NULL;
             ALTER TABLE issues ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT false;
+            ALTER TABLE issues ADD COLUMN IF NOT EXISTS deadline TIMESTAMP DEFAULT NULL;
             CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
             CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
             CREATE INDEX IF NOT EXISTS idx_issues_created_by ON issues(created_by);
