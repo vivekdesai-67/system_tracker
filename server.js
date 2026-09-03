@@ -564,15 +564,57 @@ app.get('/admin', requireAuth, requireAdmin, async (req, res) => {
     }
 });
 
-// POST /api/admin/users/:id/update-role
-app.post('/api/admin/users/:id/update-role', requireAuth, requireAdmin, async (req, res) => {
-    const { role } = req.body;
+// POST /api/admin/users (Add new user)
+app.post('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
+    const { name, username, password, role } = req.body;
     try {
-        await pool.query('UPDATE users SET role = $1 WHERE id = $2', [role, req.params.id]);
-        res.redirect('/admin?success=User role updated');
+        const hash = await bcrypt.hash(password, 10);
+        await pool.query(
+            'INSERT INTO users (name, username, password_hash, role) VALUES ($1, $2, $3, $4)',
+            [name, username, hash, role]
+        );
+        res.redirect('/admin?success=User created successfully');
     } catch (err) {
         console.error(err);
-        res.redirect('/admin?error=Failed to update role');
+        res.redirect('/admin?error=Failed to create user (Username may be taken)');
+    }
+});
+
+// POST /api/admin/users/:id/edit
+app.post('/api/admin/users/:id/edit', requireAuth, requireAdmin, async (req, res) => {
+    const { name, role } = req.body;
+    try {
+        await pool.query('UPDATE users SET name = $1, role = $2 WHERE id = $3', [name, role, req.params.id]);
+        res.redirect('/admin?success=User updated successfully');
+    } catch (err) {
+        console.error(err);
+        res.redirect('/admin?error=Failed to update user');
+    }
+});
+
+// POST /api/admin/users/:id/delete
+app.post('/api/admin/users/:id/delete', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        // Prevent deleting yourself
+        if (parseInt(req.params.id) === req.user.id) {
+            return res.redirect('/admin?error=You cannot delete yourself');
+        }
+        await pool.query('DELETE FROM users WHERE id = $1', [req.params.id]);
+        res.redirect('/admin?success=User deleted completely');
+    } catch (err) {
+        console.error(err);
+        res.redirect('/admin?error=Failed to delete user. They might have issues assigned.');
+    }
+});
+
+// POST /api/admin/issues/:id/delete
+app.post('/api/admin/issues/:id/delete', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        await pool.query('DELETE FROM issues WHERE id = $1', [req.params.id]);
+        res.redirect('/admin?success=Issue deleted permanently');
+    } catch (err) {
+        console.error(err);
+        res.redirect('/admin?error=Failed to delete issue');
     }
 });
 
