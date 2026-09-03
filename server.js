@@ -16,6 +16,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
 
 const { pool, initDB } = require('./db');
 const { sendDiscordWebhook } = require('./discord');
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } }); // 10MB max
 
 const app = express();
 
@@ -187,6 +189,21 @@ app.get('/dashboard', requireAuth, async (req, res) => {
 
         const juniorsResult = await pool.query("SELECT id, name FROM users WHERE role = 'junior' ORDER BY name");
         const seniorsResult = await pool.query("SELECT id, name FROM users WHERE role = 'senior' ORDER BY name");
+
+        // Fetch file metadata for all issues (no file_data to keep it fast)
+        const issueIds = issues.map(i => i.id);
+        let filesMap = {};
+        if (issueIds.length > 0) {
+            const filesResult = await pool.query(`
+                SELECT f.id, f.issue_id, f.file_name, f.file_type, f.file_size, u.name AS uploaded_by_name
+                FROM issue_files f JOIN users u ON u.id = f.uploaded_by
+                WHERE f.issue_id = ANY($1::int[]) ORDER BY f.created_at ASC
+            `, [issueIds]);
+            filesResult.rows.forEach(f => {
+                if (!filesMap[f.issue_id]) filesMap[f.issue_id] = [];
+                filesMap[f.issue_id].push(f);
+            });
+        }
         
         const duration = Date.now() - startTime;
         console.log(`[DASHBOARD] Loaded in ${duration}ms for ${req.user.username}`);
@@ -194,6 +211,7 @@ app.get('/dashboard', requireAuth, async (req, res) => {
         res.render('dashboard', { 
             user: req.user, 
             issues, 
+            filesMap,
             juniors: juniorsResult.rows, seniors: seniorsResult.rows, 
             toast: req.query.toast || null 
         });
@@ -204,7 +222,7 @@ app.get('/dashboard', requireAuth, async (req, res) => {
 });
 
 // POST /api/issues — Senior creates an issue
-app.post('/api/issues', requireAuth, async (req, res) => {
+app.post('/api/issues', requireAuth, upload.array('files', 5), async (req, res) => {
     if (req.user.role !== 'senior') return res.status(403).send('Forbidden');
     const { project_name, client_name, title, description, priority, assigned_to } = req.body;
     try {
@@ -219,6 +237,17 @@ app.post('/api/issues', requireAuth, async (req, res) => {
 
         const issue = result.rows[0];
         issue.assigned_name = junior.name;
+
+        // Save any attached files
+        if (req.files && req.files.length > 0) {
+            for (const file of req.files) {
+                const base64 = file.buffer.toString('base64');
+                await pool.query(`
+                    INSERT INTO issue_files (issue_id, uploaded_by, file_name, file_type, file_data, file_size)
+                    VALUES ($1, $2, $3, $4, $5, $6)
+                `, [issue.id, req.user.id, file.originalname, file.mimetype, base64, file.size]);
+            }
+        }
 
         emitToUser(junior.id, 'new_issue', issue);
         sendDiscordWebhook(`🚀 **New Issue Assigned!**\n**Title:** ${title}\n**Project:** ${project_name}\n**Client:** ${client_name}\n**Priority:** ${priority}\n**Assigned To:** ${junior.name} by ${req.user.name}`);
@@ -302,7 +331,59 @@ app.post('/api/issues/:id/verify', requireAuth, async (req, res) => {
     }
 });
 
-app.post('/api/issues/:id/update', requireAuth, async (req, res) => {
+// ── File Upload: attach files to an issue ──────────────────────────────────────
+app.post('/api/issues/:id/files', requireAuth, upload.array('files', 5), async (req, res) => {
+    const issueId = parseInt(req.params.id);
+    if (!req.files || req.files.length === 0) return res.redirect('/dashboard');
+    try {
+        for (const file of req.files) {
+            const base64 = file.buffer.toString('base64');
+            await pool.query(`
+                INSERT INTO issue_files (issue_id, uploaded_by, file_name, file_type, file_data, file_size)
+                VALUES ($1, $2, $3, $4, $5, $6)
+            `, [issueId, req.user.id, file.originalname, file.mimetype, base64, file.size]);
+        }
+        res.redirect('/dashboard');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Upload error: " + err.message);
+    }
+});
+
+// ── File Serve: stream a file from database ────────────────────────────────────
+app.get('/api/files/:id', requireAuth, async (req, res) => {
+    const fileId = parseInt(req.params.id);
+    try {
+        const result = await pool.query('SELECT * FROM issue_files WHERE id = $1', [fileId]);
+        if (result.rows.length === 0) return res.status(404).send('File not found');
+        const file = result.rows[0];
+        const buffer = Buffer.from(file.file_data, 'base64');
+        res.setHeader('Content-Type', file.file_type);
+        res.setHeader('Content-Disposition', `inline; filename="${file.file_name}"`);
+        res.setHeader('Content-Length', buffer.length);
+        res.send(buffer);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("File serve error: " + err.message);
+    }
+});
+
+// ── File List: get files for an issue ─────────────────────────────────────────
+app.get('/api/issues/:id/files', requireAuth, async (req, res) => {
+    const issueId = parseInt(req.params.id);
+    try {
+        const result = await pool.query(`
+            SELECT f.id, f.file_name, f.file_type, f.file_size, f.created_at, u.name AS uploaded_by_name
+            FROM issue_files f JOIN users u ON u.id = f.uploaded_by
+            WHERE f.issue_id = $1 ORDER BY f.created_at DESC
+        `, [issueId]);
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/issues/:id/update', requireAuth, upload.array('files', 5), async (req, res) => {
     if (req.user.role !== 'junior') return res.status(403).send('Forbidden');
     const { update_text, mark_resolved, notify_senior_id } = req.body;
     const newStatus = mark_resolved === 'true' ? 'Resolved' : 'In Progress';
@@ -322,6 +403,17 @@ app.post('/api/issues/:id/update', requireAuth, async (req, res) => {
 
         if (result.rows.length === 0) return res.redirect('/dashboard');
         const issue = result.rows[0];
+
+        // Save any uploaded files
+        if (req.files && req.files.length > 0) {
+            for (const file of req.files) {
+                const base64 = file.buffer.toString('base64');
+                await pool.query(`
+                    INSERT INTO issue_files (issue_id, uploaded_by, file_name, file_type, file_data, file_size)
+                    VALUES ($1, $2, $3, $4, $5, $6)
+                `, [issueId, req.user.id, file.originalname, file.mimetype, base64, file.size]);
+            }
+        }
 
         // Notify specific senior if marked resolved
         if (mark_resolved === 'true' && notify_senior_id) {

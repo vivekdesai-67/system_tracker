@@ -61,13 +61,24 @@ async function initDB() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
-            
+
+            CREATE TABLE IF NOT EXISTS issue_files (
+                id SERIAL PRIMARY KEY,
+                issue_id INTEGER NOT NULL REFERENCES issues(id) ON DELETE CASCADE,
+                uploaded_by INTEGER NOT NULL REFERENCES users(id),
+                file_name VARCHAR(500) NOT NULL,
+                file_type VARCHAR(100) NOT NULL,
+                file_data TEXT NOT NULL,
+                file_size INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
             
             ALTER TABLE users ADD COLUMN IF NOT EXISTS discord_id VARCHAR(255) DEFAULT NULL;
             CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
             CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
             CREATE INDEX IF NOT EXISTS idx_issues_created_by ON issues(created_by);
             CREATE INDEX IF NOT EXISTS idx_issues_assigned_to ON issues(assigned_to);
+            CREATE INDEX IF NOT EXISTS idx_issue_files_issue_id ON issue_files(issue_id);
         `);
 
         try {
