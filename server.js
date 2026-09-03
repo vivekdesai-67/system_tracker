@@ -259,6 +259,49 @@ app.post('/api/issues/:id/respond', requireAuth, async (req, res) => {
 });
 
 // POST /api/issues/:id/update — Junior posts update or marks resolved
+
+// Senior verifies a resolved task
+app.post('/api/issues/:id/verify', requireAuth, async (req, res) => {
+    if (req.user.role !== 'senior') return res.status(403).send('Forbidden');
+    const issueId = parseInt(req.params.id);
+    try {
+        const result = await pool.query(`
+            UPDATE issues
+            SET status = 'Verified', updated_at = NOW(),
+                updates = updates || $1::jsonb
+            WHERE id = $2 AND created_by = $3::int RETURNING *
+        `, [
+            JSON.stringify([{ text: "Senior Verified this resolution.", timestamp: new Date().toISOString(), status_at_time: 'Verified' }]),
+            issueId,
+            req.user.id
+        ]);
+
+        if (result.rows.length === 0) return res.redirect('/dashboard');
+        const issue = result.rows[0];
+
+        const juniorRes = await pool.query('SELECT * FROM users WHERE id = $1::int', [issue.assigned_to]);
+        const junior = juniorRes.rows[0];
+
+        if (junior && junior.discord_id) {
+            sendDiscordWebhook(
+                `**Task Verified**\n\n**Issue #${issue.id}** "${issue.title}" has been successfully VERIFIED by Senior **${req.user.name}**! Great job!`,
+                0x10b981,
+                `<@${junior.discord_id}>`
+            );
+        } else {
+            sendDiscordWebhook(
+                `**Task Verified**\n\n**Issue #${issue.id}** "${issue.title}" was verified by **${req.user.name}**.`,
+                0x10b981
+            );
+        }
+
+        res.redirect('/dashboard');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server error');
+    }
+});
+
 app.post('/api/issues/:id/update', requireAuth, async (req, res) => {
     if (req.user.role !== 'junior') return res.status(403).send('Forbidden');
     const { update_text, mark_resolved, notify_senior_id } = req.body;

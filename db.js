@@ -55,13 +55,22 @@ async function initDB() {
                 created_by INTEGER NOT NULL REFERENCES users(id),
                 assigned_to INTEGER NOT NULL REFERENCES users(id),
                 status VARCHAR(30) NOT NULL DEFAULT 'Pending Response'
-                    CHECK (status IN ('Pending Response', 'Accepted', 'Denied', 'In Progress', 'Resolved')),
+                    CHECK (status IN ('Pending Response', 'Accepted', 'Denied', 'In Progress', 'Resolved', 'Verified')),
                 response_at TIMESTAMP DEFAULT NULL,
                 updates JSONB DEFAULT '[]'::jsonb,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
             
+            
+            // Update constraint if it exists (Catch error if it doesn't)
+            try {
+                await client.query("ALTER TABLE issues DROP CONSTRAINT IF EXISTS issues_status_check;");
+                await client.query("ALTER TABLE issues ADD CONSTRAINT issues_status_check CHECK (status IN ('Pending Response', 'Accepted', 'Denied', 'In Progress', 'Resolved', 'Verified'));");
+            } catch (e) {
+                console.error("Non-fatal error updating constraint:", e.message);
+            }
+
             ALTER TABLE users ADD COLUMN IF NOT EXISTS discord_id VARCHAR(255) DEFAULT NULL;
             CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
             CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
