@@ -631,7 +631,7 @@
                     </div>
                     <div id="col-<%= col.key.replace(/ /g,'_') %>">
                     <% issues.filter(i => i.status === col.key).forEach(issue => { %>
-                        <div class="issue-card <%= col.css %>" id="issue-<%= issue.id %>">
+                        <div class="issue-card <%= col.css %>" id="issue-<%= issue.id %>" onclick="this.classList.toggle('expanded')" style="cursor: pointer;">
                             <div class="issue-id">#<%= issue.id %> · <%= issue.project_name %><% if(issue.client_name){ %> · <span style="color:var(--accent-secondary)"><%= issue.client_name %></span><% } %></div>
                             <div class="issue-title" style="margin-bottom: 0;"><%= issue.title %></div>
                             <div class="issue-details">
