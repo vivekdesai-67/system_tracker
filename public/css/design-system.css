@@ -116,7 +116,7 @@
 
 
 *  { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; color-scheme: dark; }
+html { scroll-behavior: smooth; color-scheme: light; }
 
 body {
   font-family: var(--font-sans);
@@ -309,10 +309,25 @@ body.is-loading .shimmer-load::after { display: block; }
 }
 
 
-select, select.form-input, .form-input, body, html {
+/* Dark mode explicit overrides for native controls */
+[data-theme="dark"] select, 
+[data-theme="dark"] .form-input, 
+[data-theme="dark"] body, 
+[data-theme="dark"] html {
     color-scheme: dark !important;
 }
-option {
+[data-theme="dark"] option {
     background-color: #1e1e1e !important;
     color: #fff !important;
+}
+
+[data-theme="light"] select, 
+[data-theme="light"] .form-input, 
+[data-theme="light"] body, 
+[data-theme="light"] html {
+    color-scheme: light !important;
+}
+[data-theme="light"] option {
+    background-color: #ffffff !important;
+    color: #000 !important;
 }
