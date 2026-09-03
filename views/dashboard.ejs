@@ -645,9 +645,9 @@
                 <div class="form-group">
                     <label>Priority</label>
                     <div class="priority-group" id="priority-group">
-                        <button type="button" class="priority-btn active-low" data-val="Low">🟢 Low</button>
-                        <button type="button" class="priority-btn" data-val="Medium">🟡 Medium</button>
-                        <button type="button" class="priority-btn" data-val="High">🔴 High</button>
+                        <button type="button" class="priority-btn active-low" data-val="Low" onclick="setPriority('Low')">🟢 Low</button>
+                        <button type="button" class="priority-btn" data-val="Medium" onclick="setPriority('Medium')">🟡 Medium</button>
+                        <button type="button" class="priority-btn" data-val="High" onclick="setPriority('High')">🔴 High</button>
                     </div>
                     <input type="hidden" name="priority" id="priority-input" value="Low">
                 </div>
