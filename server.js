@@ -268,7 +268,7 @@ app.post('/api/issues/:id/verify', requireAuth, async (req, res) => {
         const result = await pool.query(`
             UPDATE issues
             SET status = 'Verified', updated_at = NOW(),
-                updates = updates || $1::jsonb
+                updates = COALESCE(updates, '[]'::jsonb) || $1::jsonb
             WHERE id = $2 AND created_by = $3::int RETURNING *
         `, [
             JSON.stringify([{ text: "Senior Verified this resolution.", timestamp: new Date().toISOString(), status_at_time: 'Verified' }]),
@@ -298,7 +298,7 @@ app.post('/api/issues/:id/verify', requireAuth, async (req, res) => {
         res.redirect('/dashboard');
     } catch (err) {
         console.error(err);
-        res.status(500).send('Server error');
+        res.status(500).send("Server error: " + err.message + "\n" + err.stack);
     }
 });
 

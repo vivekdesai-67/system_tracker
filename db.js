@@ -63,20 +63,20 @@ async function initDB() {
             );
             
             
-            // Update constraint if it exists (Catch error if it doesn't)
-            try {
-                await client.query("ALTER TABLE issues DROP CONSTRAINT IF EXISTS issues_status_check;");
-                await client.query("ALTER TABLE issues ADD CONSTRAINT issues_status_check CHECK (status IN ('Pending Response', 'Accepted', 'Denied', 'In Progress', 'Resolved', 'Verified'));");
-            } catch (e) {
-                console.error("Non-fatal error updating constraint:", e.message);
-            }
-
             ALTER TABLE users ADD COLUMN IF NOT EXISTS discord_id VARCHAR(255) DEFAULT NULL;
             CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
             CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
             CREATE INDEX IF NOT EXISTS idx_issues_created_by ON issues(created_by);
             CREATE INDEX IF NOT EXISTS idx_issues_assigned_to ON issues(assigned_to);
         `);
+
+        try {
+            await client.query("ALTER TABLE issues DROP CONSTRAINT IF EXISTS issues_status_check;");
+            await client.query("ALTER TABLE issues ADD CONSTRAINT issues_status_check CHECK (status IN ('Pending Response', 'Accepted', 'Denied', 'In Progress', 'Resolved', 'Verified'));");
+        } catch(e) {
+            console.error("Non-fatal constraint error:", e.message);
+        }
+
         
         // Auto-seed admin and all default users
         const bcrypt = require('bcryptjs');
