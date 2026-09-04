@@ -15,8 +15,31 @@ const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
 
 const { pool, initDB } = require('./db');
 const { sendDiscordWebhook } = require('./discord');
-const multer = require('multer');
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } }); // 10MB max
+const multer = require("multer");
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+const cloudinary = require("cloudinary").v2;
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "uq71l31b",
+  api_key: process.env.CLOUDINARY_API_KEY || "789231112342353",
+  api_secret: process.env.CLOUDINARY_API_SECRET || "NPQpB9RzFVizDsdOrG0xsH1sCng"
+});
+
+const streamifier = require("streamifier");
+
+const uploadToCloudinary = (buffer, filename) => {
+    return new Promise((resolve, reject) => {
+        const cld_upload_stream = cloudinary.uploader.upload_stream(
+            { resource_type: "auto", public_id: filename, use_filename: true },
+            (error, result) => {
+                if (result) resolve(result.secure_url);
+                else reject(error);
+            }
+        );
+        streamifier.createReadStream(buffer).pipe(cld_upload_stream);
+    });
+};
+ // 10MB max
 
 const app = express();
 
@@ -258,14 +281,16 @@ app.post('/api/issues', requireAuth, upload.array('files', 5), async (req, res) 
         const issue = result.rows[0];
         issue.assigned_name = junior.name;
 
-        // Save any attached files
+        // Save any attached files (to Cloudinary)
         if (req.files && req.files.length > 0) {
             for (const file of req.files) {
-                const base64 = file.buffer.toString('base64');
-                await pool.query(`
-                    INSERT INTO issue_files (issue_id, uploaded_by, file_name, file_type, file_data, file_size)
-                    VALUES ($1, $2, $3, $4, $5, $6)
-                `, [issue.id, req.user.id, file.originalname, file.mimetype, base64, file.size]);
+                try {
+                    const fileUrl = await uploadToCloudinary(file.buffer, file.originalname);
+                    await pool.query(`
+                        INSERT INTO issue_files (issue_id, uploaded_by, file_name, file_type, file_data, file_size)
+                        VALUES ($1, $2, $3, $4, $5, $6)
+                    `, [issue.id, req.user.id, file.originalname, file.mimetype, fileUrl, file.size]);
+                } catch (e) { console.error("Cloudinary upload failed:", e); }
             }
         }
 
@@ -415,6 +440,13 @@ app.get('/api/files/:id', requireAuth, async (req, res) => {
         const result = await pool.query('SELECT * FROM issue_files WHERE id = $1', [fileId]);
         if (result.rows.length === 0) return res.status(404).send('File not found');
         const file = result.rows[0];
+        
+        // Check if it is a Cloudinary URL
+        if (file.file_data.startsWith("http")) {
+            return res.redirect(file.file_data);
+        }
+        
+        // Fallback for old base64 files
         const buffer = Buffer.from(file.file_data, 'base64');
         res.setHeader('Content-Type', file.file_type);
         res.setHeader('Content-Disposition', `inline; filename="${file.file_name}"`);
@@ -433,7 +465,15 @@ app.get('/api/files/:id/preview', requireAuth, async (req, res) => {
         const result = await pool.query('SELECT * FROM issue_files WHERE id = $1', [fileId]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'File not found' });
         const file = result.rows[0];
-        const buffer = Buffer.from(file.file_data, 'base64');
+        
+        let buffer;
+        if (file.file_data.startsWith("http")) {
+            // Fetch the file from Cloudinary to generate preview
+            const response = await fetch(file.file_data);
+            buffer = Buffer.from(await response.arrayBuffer());
+        } else {
+            buffer = Buffer.from(file.file_data, 'base64');
+        }
         const ft = file.file_type;
         const fname = file.file_name.toLowerCase();
 
